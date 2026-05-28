@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Eye, EyeOff, AlertCircle, Check } from 'lucide-react'
+import { Eye, EyeOff, AlertCircle, Check, Mail } from 'lucide-react'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [registered, setRegistered] = useState(false)
 
   function update(field: string, value: string) {
     setForm(f => ({ ...f, [field]: value }))
@@ -48,9 +49,40 @@ export default function RegisterPage() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/dashboard')
-      router.refresh()
+      setRegistered(true)
     }
+  }
+
+  if (registered) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-600 rounded-2xl mb-4">
+              <span className="text-white text-2xl font-bold leading-none">£</span>
+            </div>
+            <h1 className="text-2xl font-bold text-white">Budget Tracker</h1>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-600/20 rounded-full mb-4">
+              <Mail size={24} className="text-indigo-400" />
+            </div>
+            <h2 className="text-lg font-semibold text-white mb-2">Check your email</h2>
+            <p className="text-slate-400 text-sm mb-1">
+              We sent a confirmation link to
+            </p>
+            <p className="text-white font-medium text-sm mb-4">{form.email}</p>
+            <p className="text-slate-400 text-sm">
+              Click the link in the email to verify your account, then you can{' '}
+              <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-medium">
+                sign in
+              </Link>
+              .
+            </p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
