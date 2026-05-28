@@ -46,7 +46,7 @@ export default function CategoriesPage() {
         </div>
         <button
           onClick={() => { setEditingCategory(null); setShowModal(true) }}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
         >
           <Plus size={16} />
           Add category
@@ -76,13 +76,13 @@ export default function CategoriesPage() {
               <div className="flex gap-1">
                 <button
                   onClick={() => { setEditingCategory(cat); setShowModal(true) }}
-                  className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                  className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors cursor-pointer"
                 >
                   <Edit size={14} />
                 </button>
                 <button
                   onClick={() => setDeleteId(cat.id)}
-                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors cursor-pointer"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -106,8 +106,8 @@ export default function CategoriesPage() {
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Delete category?</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm mb-5">Transactions using this category will become uncategorised.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">Cancel</button>
-              <button onClick={() => handleDelete(deleteId)} className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg py-2.5 text-sm font-medium">Delete</button>
+              <button onClick={() => setDeleteId(null)} className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">Cancel</button>
+              <button onClick={() => handleDelete(deleteId)} className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg py-2.5 text-sm font-medium cursor-pointer">Delete</button>
             </div>
           </div>
         </div>

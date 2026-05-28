@@ -89,7 +89,7 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
         </div>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
         >
           <LogOut size={18} />
           Sign out
@@ -113,7 +113,7 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
           </div>
           <span className="text-white font-bold text-sm">Budget Tracker</span>
         </div>
-        <button onClick={() => setMobileOpen(true)} className="text-slate-400 hover:text-white">
+        <button onClick={() => setMobileOpen(true)} className="text-slate-400 hover:text-white cursor-pointer">
           <Menu size={22} />
         </button>
       </div>
@@ -121,11 +121,11 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
       {/* Mobile drawer */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
+          <div className="absolute inset-0 bg-black/60 cursor-pointer" onClick={() => setMobileOpen(false)} />
           <div className="relative w-64 bg-slate-900 h-full flex flex-col">
             <button
               onClick={() => setMobileOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+              className="absolute top-4 right-4 text-slate-400 hover:text-white cursor-pointer"
             >
               <X size={20} />
             </button>

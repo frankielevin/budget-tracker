@@ -117,7 +117,7 @@ export default function TransactionModal({ transaction, accounts, categories, on
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             {transaction ? 'Edit Transaction' : 'Add Transaction'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
             <X size={20} />
           </button>
         </div>
@@ -139,7 +139,7 @@ export default function TransactionModal({ transaction, accounts, categories, on
                   key={t}
                   type="button"
                   onClick={() => update('type', t)}
-                  className={`py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
+                  className={`py-2 rounded-lg text-sm font-medium capitalize transition-colors cursor-pointer ${
                     form.type === t
                       ? t === 'income'
                         ? 'bg-green-100 text-green-700 border-2 border-green-400'
@@ -226,10 +226,10 @@ export default function TransactionModal({ transaction, accounts, categories, on
           )}
 
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+            <button type="button" onClick={onClose} className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer">
               Cancel
             </button>
-            <button type="submit" disabled={loading} className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg py-2.5 text-sm font-medium transition-colors">
+            <button type="submit" disabled={loading} className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg py-2.5 text-sm font-medium transition-colors cursor-pointer">
               {loading ? 'Saving...' : transaction ? 'Save changes' : 'Add transaction'}
             </button>
           </div>

@@ -123,7 +123,7 @@ export default function TransactionsPage() {
     )
   }
 
-  const selectClass = 'border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200'
+  const selectClass = 'border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 cursor-pointer'
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -137,14 +137,14 @@ export default function TransactionsPage() {
           <button
             onClick={exportCSV}
             disabled={filtered.length === 0}
-            className="flex items-center gap-2 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 dark:text-slate-200 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            className="flex items-center gap-2 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 dark:text-slate-200 rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
           >
             <Download size={16} />
             Export CSV
           </button>
           <button
             onClick={() => { setEditingTx(null); setShowModal(true) }}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
           >
             <Plus size={16} />
             Add transaction
@@ -182,7 +182,7 @@ export default function TransactionsPage() {
           <select
             value={filterMonth}
             onChange={e => setFilterMonth(e.target.value)}
-            className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 font-medium rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 font-medium rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 cursor-pointer"
           >
             <option value="all">All months</option>
             {availableMonths.map(key => {
@@ -277,13 +277,13 @@ export default function TransactionsPage() {
                         <div className="flex items-center gap-1 shrink-0">
                           <button
                             onClick={() => { setEditingTx(t); setShowModal(true) }}
-                            className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors cursor-pointer"
                           >
                             <Edit size={14} />
                           </button>
                           <button
                             onClick={() => setDeleteId(t.id)}
-                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors cursor-pointer"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -314,10 +314,10 @@ export default function TransactionsPage() {
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Delete transaction?</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm mb-5">This action cannot be undone.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">
+              <button onClick={() => setDeleteId(null)} className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">
                 Cancel
               </button>
-              <button onClick={() => handleDelete(deleteId)} className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg py-2.5 text-sm font-medium">
+              <button onClick={() => handleDelete(deleteId)} className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg py-2.5 text-sm font-medium cursor-pointer">
                 Delete
               </button>
             </div>

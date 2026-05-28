@@ -50,6 +50,16 @@ create table if not exists public.transactions (
   updated_at timestamp with time zone default now()
 );
 
+-- Budgets table (recurring monthly limits per category)
+create table if not exists public.budgets (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users on delete cascade not null,
+  category_id uuid references public.categories on delete cascade not null,
+  amount decimal(12,2) not null check (amount > 0),
+  created_at timestamp with time zone default now(),
+  unique (user_id, category_id)
+);
+
 -- =============================================
 -- Row Level Security
 -- =============================================
@@ -58,6 +68,7 @@ alter table public.profiles enable row level security;
 alter table public.accounts enable row level security;
 alter table public.categories enable row level security;
 alter table public.transactions enable row level security;
+alter table public.budgets enable row level security;
 
 -- Profiles
 create policy "Users can view own profile"
@@ -78,6 +89,10 @@ create policy "Users manage own categories"
 -- Transactions
 create policy "Users manage own transactions"
   on public.transactions for all using (auth.uid() = user_id);
+
+-- Budgets
+create policy "Users manage own budgets"
+  on public.budgets for all using (auth.uid() = user_id);
 
 -- =============================================
 -- Auto-create profile on signup

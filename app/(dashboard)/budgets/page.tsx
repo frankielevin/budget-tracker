@@ -59,7 +59,7 @@ export default function BudgetsPage() {
   const takenCategoryIds = budgets.map(b => b.category_id)
   const unbudgetedCount = categories.filter(c => !takenCategoryIds.includes(c.id)).length
 
-  const dateSelectClass = 'bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 font-medium rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+  const dateSelectClass = 'bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 font-medium rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 cursor-pointer'
 
   if (loading) {
     return (
@@ -91,7 +91,7 @@ export default function BudgetsPage() {
           {unbudgetedCount > 0 && (
             <button
               onClick={() => { setEditingBudget(null); setShowModal(true) }}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
             >
               <Plus size={16} />
               Add budget
@@ -135,7 +135,7 @@ export default function BudgetsPage() {
           <p className="text-slate-400 text-sm mb-4">Add a budget once and it applies every month automatically.</p>
           <button
             onClick={() => { setEditingBudget(null); setShowModal(true) }}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
           >
             Add your first budget
           </button>
@@ -182,13 +182,13 @@ export default function BudgetsPage() {
                     <div className="flex gap-1">
                       <button
                         onClick={() => { setEditingBudget(budget); setShowModal(true) }}
-                        className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                        className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors cursor-pointer"
                       >
                         <Edit size={14} />
                       </button>
                       <button
                         onClick={() => setDeleteId(budget.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors cursor-pointer"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -224,8 +224,8 @@ export default function BudgetsPage() {
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Delete budget?</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm mb-5">Your transactions won&apos;t be affected.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">Cancel</button>
-              <button onClick={() => handleDelete(deleteId)} className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg py-2.5 text-sm font-medium">Delete</button>
+              <button onClick={() => setDeleteId(null)} className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">Cancel</button>
+              <button onClick={() => handleDelete(deleteId)} className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg py-2.5 text-sm font-medium cursor-pointer">Delete</button>
             </div>
           </div>
         </div>

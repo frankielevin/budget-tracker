@@ -86,7 +86,7 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">Auto-generates transactions each period</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
             <X size={20} />
           </button>
         </div>
@@ -108,7 +108,7 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
                   key={t}
                   type="button"
                   onClick={() => setType(t)}
-                  className={`flex-1 py-1.5 rounded-md text-sm font-medium transition-all capitalize ${
+                  className={`flex-1 py-1.5 rounded-md text-sm font-medium transition-all capitalize cursor-pointer ${
                     type === t ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                   }`}
                 >
@@ -178,10 +178,10 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+            <button type="button" onClick={onClose} className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer">
               Cancel
             </button>
-            <button type="submit" disabled={loading} className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg py-2.5 text-sm font-medium transition-colors">
+            <button type="submit" disabled={loading} className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg py-2.5 text-sm font-medium transition-colors cursor-pointer">
               {loading ? 'Saving...' : recurring ? 'Save changes' : 'Add recurring'}
             </button>
           </div>

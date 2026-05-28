@@ -70,7 +70,7 @@ export default function RecurringPage() {
         </div>
         <button
           onClick={() => { setEditingTemplate(null); setShowModal(true) }}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
         >
           <Plus size={16} />
           Add recurring
@@ -106,7 +106,7 @@ export default function RecurringPage() {
           <p className="text-slate-400 text-sm mb-4">Add a recurring template and it will auto-generate transactions each period.</p>
           <button
             onClick={() => { setEditingTemplate(null); setShowModal(true) }}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
           >
             Add your first recurring
           </button>
@@ -148,8 +148,8 @@ export default function RecurringPage() {
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Delete recurring?</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm mb-5">Previously generated transactions will not be affected.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">Cancel</button>
-              <button onClick={() => handleDelete(deleteId)} className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg py-2.5 text-sm font-medium">Delete</button>
+              <button onClick={() => setDeleteId(null)} className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">Cancel</button>
+              <button onClick={() => handleDelete(deleteId)} className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg py-2.5 text-sm font-medium cursor-pointer">Delete</button>
             </div>
           </div>
         </div>
@@ -193,13 +193,13 @@ function TemplateRow({
         {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
       </span>
       <div className="flex items-center gap-1 shrink-0">
-        <button onClick={onToggle} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors" title={t.is_active ? 'Pause' : 'Resume'}>
+        <button onClick={onToggle} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors cursor-pointer" title={t.is_active ? 'Pause' : 'Resume'}>
           {t.is_active ? <Pause size={14} /> : <Play size={14} />}
         </button>
-        <button onClick={onEdit} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors">
+        <button onClick={onEdit} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors cursor-pointer">
           <Edit size={14} />
         </button>
-        <button onClick={onDelete} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+        <button onClick={onDelete} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors cursor-pointer">
           <Trash2 size={14} />
         </button>
       </div>

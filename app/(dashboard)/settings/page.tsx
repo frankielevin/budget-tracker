@@ -193,7 +193,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex justify-end pt-1">
-            <button type="submit" disabled={profileLoading} className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium rounded-lg px-5 py-2.5 text-sm transition-colors">
+            <button type="submit" disabled={profileLoading} className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg px-5 py-2.5 text-sm transition-colors cursor-pointer">
               {profileLoading ? 'Saving...' : 'Save changes'}
             </button>
           </div>
@@ -243,7 +243,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex justify-end pt-1">
-            <button type="submit" disabled={passwordLoading} className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium rounded-lg px-5 py-2.5 text-sm transition-colors">
+            <button type="submit" disabled={passwordLoading} className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg px-5 py-2.5 text-sm transition-colors cursor-pointer">
               {passwordLoading ? 'Updating...' : 'Update password'}
             </button>
           </div>
