@@ -42,8 +42,9 @@ export interface RecurringTransaction {
   id: string
   user_id: string
   account_id: string | null
+  to_account_id: string | null
   category_id: string | null
-  type: 'income' | 'expense'
+  type: TransactionType
   amount: number
   description: string
   frequency: 'monthly' | 'yearly'
@@ -53,6 +54,7 @@ export interface RecurringTransaction {
   is_active: boolean
   created_at: string
   account?: Account
+  to_account?: Account
   category?: Category
 }
 

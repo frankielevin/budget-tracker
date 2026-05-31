@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { X, AlertCircle, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import type { Transaction, Account, Category } from '@/lib/types'
+import { transactionDeltas, mergeDeltas, negateDeltas, applyBalanceDeltas } from '@/lib/balances'
+import type { Transaction, Account, Category, TransactionType } from '@/lib/types'
 
 interface Props {
   transaction?: Transaction | null
@@ -11,17 +12,6 @@ interface Props {
   categories: Category[]
   onClose: () => void
   onSave: () => void
-}
-
-async function updateAccountBalance(
-  supabase: ReturnType<typeof createClient>,
-  accountId: string,
-  delta: number
-) {
-  const { data } = await supabase.from('accounts').select('balance').eq('id', accountId).single()
-  if (data) {
-    await supabase.from('accounts').update({ balance: data.balance + delta }).eq('id', accountId)
-  }
 }
 
 export default function TransactionModal({ transaction, accounts, categories, onClose, onSave }: Props) {
@@ -66,16 +56,6 @@ export default function TransactionModal({ transaction, accounts, categories, on
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    if (transaction?.type === 'transfer' && transaction.account_id && transaction.to_account_id) {
-      await updateAccountBalance(supabase, transaction.account_id, transaction.amount)
-      await updateAccountBalance(supabase, transaction.to_account_id, -transaction.amount)
-    }
-
-    if (isTransfer && form.account_id && form.to_account_id) {
-      await updateAccountBalance(supabase, form.account_id, -amount)
-      await updateAccountBalance(supabase, form.to_account_id, amount)
-    }
-
     const payload = {
       user_id: user.id,
       type: form.type,
@@ -88,18 +68,28 @@ export default function TransactionModal({ transaction, accounts, categories, on
       notes: form.notes.trim() || null,
     }
 
+    // The balance impact of the transaction as it will be saved.
+    const newEffect = transactionDeltas({
+      type: form.type as TransactionType,
+      amount,
+      account_id: payload.account_id,
+      to_account_id: payload.to_account_id,
+    })
+
     let error
     if (transaction) {
       ;({ error } = await supabase.from('transactions').update(payload).eq('id', transaction.id))
+      if (!error) {
+        // Undo the previous version's effect, then apply the new one.
+        const oldEffect = transactionDeltas(transaction)
+        await applyBalanceDeltas(supabase, mergeDeltas(negateDeltas(oldEffect), newEffect))
+      }
     } else {
       ;({ error } = await supabase.from('transactions').insert(payload))
+      if (!error) await applyBalanceDeltas(supabase, newEffect)
     }
 
     if (error) {
-      if (isTransfer && form.account_id && form.to_account_id) {
-        await updateAccountBalance(supabase, form.account_id, amount)
-        await updateAccountBalance(supabase, form.to_account_id, -amount)
-      }
       setError(error.message)
       setLoading(false)
     } else {

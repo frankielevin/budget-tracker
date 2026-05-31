@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { transactionDeltas, mergeDeltas, applyBalanceDeltas } from '@/lib/balances'
 import type { RecurringTransaction } from '@/lib/types'
 
 let generating = false
@@ -47,6 +48,29 @@ async function _generate() {
 
   const now = new Date()
   const inserts: object[] = []
+  // Net balance change per account from every newly generated transaction.
+  let balanceDeltas: Record<string, number> = {}
+
+  function buildInsert(t: RecurringTransaction, dateStr: string) {
+    const to_account_id = t.type === 'transfer' ? t.to_account_id : null
+    balanceDeltas = mergeDeltas(balanceDeltas, transactionDeltas({
+      type: t.type,
+      amount: t.amount,
+      account_id: t.account_id,
+      to_account_id,
+    }))
+    return {
+      user_id: user!.id,
+      account_id: t.account_id,
+      to_account_id,
+      category_id: t.type === 'transfer' ? null : t.category_id,
+      type: t.type,
+      amount: t.amount,
+      description: t.description,
+      date: dateStr,
+      recurring_id: t.id,
+    }
+  }
 
   for (const t of templates as RecurringTransaction[]) {
     if (t.frequency === 'monthly') {
@@ -64,17 +88,7 @@ async function _generate() {
           const lastDay = new Date(year, month + 1, 0).getDate()
           const day = Math.min(t.day_of_month, lastDay)
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-          inserts.push({
-            user_id: user.id,
-            account_id: t.account_id,
-            category_id: t.category_id,
-            type: t.type,
-            amount: t.amount,
-            description: t.description,
-            date: dateStr,
-            recurring_id: t.id,
-            to_account_id: null,
-          })
+          inserts.push(buildInsert(t, dateStr))
         }
         month++
         if (month > 11) { month = 0; year++ }
@@ -91,23 +105,15 @@ async function _generate() {
           const lastDay = new Date(year, month + 1, 0).getDate()
           const day = Math.min(t.day_of_month, lastDay)
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-          inserts.push({
-            user_id: user.id,
-            account_id: t.account_id,
-            category_id: t.category_id,
-            type: t.type,
-            amount: t.amount,
-            description: t.description,
-            date: dateStr,
-            recurring_id: t.id,
-            to_account_id: null,
-          })
+          inserts.push(buildInsert(t, dateStr))
         }
       }
     }
   }
 
   if (inserts.length > 0) {
-    await supabase.from('transactions').insert(inserts)
+    const { error } = await supabase.from('transactions').insert(inserts)
+    // Only move balances once the generated transactions are safely persisted.
+    if (!error) await applyBalanceDeltas(supabase, balanceDeltas)
   }
 }

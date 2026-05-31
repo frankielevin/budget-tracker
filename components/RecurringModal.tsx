@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, AlertCircle } from 'lucide-react'
+import { X, AlertCircle, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { RecurringTransaction, Account, Category } from '@/lib/types'
 
@@ -18,10 +18,11 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
 
 export default function RecurringModal({ recurring, accounts, categories, onClose, onSave }: Props) {
   const now = new Date()
-  const [type, setType] = useState<'income' | 'expense'>(recurring?.type || 'expense')
+  const [type, setType] = useState<'income' | 'expense' | 'transfer'>(recurring?.type || 'expense')
   const [description, setDescription] = useState(recurring?.description || '')
   const [amount, setAmount] = useState(recurring?.amount?.toString() || '')
   const [accountId, setAccountId] = useState(recurring?.account_id || '')
+  const [toAccountId, setToAccountId] = useState(recurring?.to_account_id || '')
   const [categoryId, setCategoryId] = useState(recurring?.category_id || '')
   const [frequency, setFrequency] = useState<'monthly' | 'yearly'>(recurring?.frequency || 'monthly')
   const [dayOfMonth, setDayOfMonth] = useState(recurring?.day_of_month?.toString() || '1')
@@ -29,6 +30,8 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
   const [startYear, setStartYear] = useState(recurring?.start_year?.toString() || String(now.getFullYear()))
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const isTransfer = type === 'transfer'
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -38,7 +41,12 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
     if (!description.trim()) return setError('Please enter a description.')
     if (!amount || isNaN(parsedAmount) || parsedAmount <= 0) return setError('Please enter a valid amount.')
     const day = parseInt(dayOfMonth)
-    if (isNaN(day) || day < 1 || day > 28) return setError('Day must be between 1 and 28.')
+    if (isNaN(day) || day < 1 || day > 31) return setError('Day must be between 1 and 31.')
+    if (isTransfer) {
+      if (!accountId) return setError('Please select a From account.')
+      if (!toAccountId) return setError('Please select a To account.')
+      if (accountId === toAccountId) return setError('From and To accounts must be different.')
+    }
 
     setLoading(true)
     const supabase = createClient()
@@ -51,7 +59,8 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
       description: description.trim(),
       amount: parsedAmount,
       account_id: accountId || null,
-      category_id: categoryId || null,
+      to_account_id: isTransfer ? (toAccountId || null) : null,
+      category_id: isTransfer ? null : (categoryId || null),
       frequency,
       day_of_month: day,
       start_month: parseInt(startMonth),
@@ -102,14 +111,20 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
           {/* Type toggle */}
           <div>
             <label className={labelClass}>Type</label>
-            <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-1 gap-1">
-              {(['expense', 'income'] as const).map(t => (
+            <div className="grid grid-cols-3 gap-2">
+              {(['income', 'expense', 'transfer'] as const).map(t => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setType(t)}
-                  className={`flex-1 py-1.5 rounded-md text-sm font-medium transition-all capitalize cursor-pointer ${
-                    type === t ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                  className={`py-2 rounded-lg text-sm font-medium capitalize transition-colors cursor-pointer ${
+                    type === t
+                      ? t === 'income'
+                        ? 'bg-green-100 text-green-700 border-2 border-green-400'
+                        : t === 'expense'
+                        ? 'bg-red-100 text-red-700 border-2 border-red-400'
+                        : 'bg-blue-100 text-blue-700 border-2 border-blue-400'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-2 border-transparent hover:bg-slate-200 dark:hover:bg-slate-600'
                   }`}
                 >
                   {t}
@@ -120,7 +135,7 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
 
           <div>
             <label className={labelClass}>Description</label>
-            <input type="text" value={description} onChange={e => setDescription(e.target.value)} required autoFocus className={inputClass} placeholder="e.g. Netflix, Salary, Gym" />
+            <input type="text" value={description} onChange={e => setDescription(e.target.value)} required autoFocus className={inputClass} placeholder={isTransfer ? 'e.g. Savings transfer, Credit card payment' : 'e.g. Netflix, Salary, Gym'} />
           </div>
 
           <div>
@@ -140,8 +155,9 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
           </div>
 
           <div>
-            <label className={labelClass}>Day of month (1–28)</label>
-            <input type="number" min="1" max="28" value={dayOfMonth} onChange={e => setDayOfMonth(e.target.value)} required className={inputClass} />
+            <label className={labelClass}>Day of month (1–31)</label>
+            <input type="number" min="1" max="31" value={dayOfMonth} onChange={e => setDayOfMonth(e.target.value)} required className={inputClass} />
+            <p className="text-xs text-slate-400 mt-1">Days past a month&apos;s length roll to that month&apos;s last day (e.g. 31 → 28 in February).</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -161,21 +177,54 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
             </div>
           </div>
 
-          <div>
-            <label className={labelClass}>Account (optional)</label>
-            <select value={accountId} onChange={e => setAccountId(e.target.value)} className={inputClass}>
-              <option value="">No account</option>
-              {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
-          </div>
+          {isTransfer ? (
+            <div className="space-y-3">
+              <div>
+                <label className={labelClass}>From account</label>
+                <select value={accountId} onChange={e => setAccountId(e.target.value)} required className={inputClass}>
+                  <option value="">Select account</option>
+                  {accounts.filter(a => a.id !== toAccountId).map(a => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center justify-center">
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <div className="h-px w-12 bg-slate-200 dark:bg-slate-600" />
+                  <ArrowRight size={14} className="text-slate-400" />
+                  <div className="h-px w-12 bg-slate-200 dark:bg-slate-600" />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>To account</label>
+                <select value={toAccountId} onChange={e => setToAccountId(e.target.value)} required className={inputClass}>
+                  <option value="">Select account</option>
+                  {accounts.filter(a => a.id !== accountId).map(a => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-slate-400">Both account balances will update automatically each period.</p>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className={labelClass}>Account (optional)</label>
+                <select value={accountId} onChange={e => setAccountId(e.target.value)} className={inputClass}>
+                  <option value="">No account</option>
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
 
-          <div>
-            <label className={labelClass}>Category (optional)</label>
-            <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className={inputClass}>
-              <option value="">No category</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
+              <div>
+                <label className={labelClass}>Category (optional)</label>
+                <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className={inputClass}>
+                  <option value="">No category</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            </>
+          )}
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer">
