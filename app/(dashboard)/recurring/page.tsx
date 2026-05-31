@@ -19,7 +19,7 @@ export default function RecurringPage() {
   async function load() {
     const supabase = createClient()
     const [{ data: r }, { data: a }, { data: c }] = await Promise.all([
-      supabase.from('recurring_transactions').select('*, account:accounts(*), category:categories(*)').order('created_at', { ascending: false }),
+      supabase.from('recurring_transactions').select('*, account:accounts!account_id(*), to_account:accounts!to_account_id(*), category:categories(*)').order('created_at', { ascending: false }),
       supabase.from('accounts').select('*').order('name'),
       supabase.from('categories').select('*').order('name'),
     ])
@@ -168,7 +168,9 @@ function TemplateRow({
 }) {
   const cat = t.category as Category | undefined
   const acc = t.account as Account | undefined
-  const color = cat?.color || (t.type === 'income' ? '#22c55e' : '#6b7280')
+  const toAcc = t.to_account as Account | undefined
+  const isTransfer = t.type === 'transfer'
+  const color = isTransfer ? '#3b82f6' : (cat?.color || (t.type === 'income' ? '#22c55e' : '#6b7280'))
 
   const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -185,12 +187,18 @@ function TemplateRow({
         <p className="text-sm font-semibold text-slate-900 dark:text-white">{t.description}</p>
         <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
           <span>{freqLabel}</span>
-          {cat && <><span className="text-slate-200 dark:text-slate-600">·</span><span>{cat.name}</span></>}
-          {acc && <><span className="text-slate-200 dark:text-slate-600">·</span><span>{acc.name}</span></>}
+          {isTransfer && acc && toAcc ? (
+            <><span className="text-slate-200 dark:text-slate-600">·</span><span>{acc.name} → {toAcc.name}</span></>
+          ) : (
+            <>
+              {cat && <><span className="text-slate-200 dark:text-slate-600">·</span><span>{cat.name}</span></>}
+              {acc && <><span className="text-slate-200 dark:text-slate-600">·</span><span>{acc.name}</span></>}
+            </>
+          )}
         </div>
       </div>
-      <span className={`text-sm font-bold shrink-0 ${t.type === 'income' ? 'text-green-600' : 'text-red-500'}`}>
-        {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+      <span className={`text-sm font-bold shrink-0 ${t.type === 'income' ? 'text-green-600' : t.type === 'expense' ? 'text-red-500' : 'text-blue-500'}`}>
+        {t.type === 'income' ? '+' : t.type === 'expense' ? '-' : ''}{formatCurrency(t.amount)}
       </span>
       <div className="flex items-center gap-1 shrink-0">
         <button onClick={onToggle} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors cursor-pointer" title={t.is_active ? 'Pause' : 'Resume'}>

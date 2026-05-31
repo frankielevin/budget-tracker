@@ -6,6 +6,7 @@ import { formatCurrency, formatDate, MONTHS } from '@/lib/utils'
 import { Plus, Edit, Trash2, Search, Download, Repeat } from 'lucide-react'
 import TransactionModal from '@/components/TransactionModal'
 import { generateRecurringTransactions } from '@/lib/recurring'
+import { transactionDeltas, negateDeltas, applyBalanceDeltas } from '@/lib/balances'
 import type { Transaction, Account, Category } from '@/lib/types'
 
 export default function TransactionsPage() {
@@ -44,19 +45,10 @@ export default function TransactionsPage() {
     const supabase = createClient()
 
     const tx = transactions.find(t => t.id === id)
-    if (tx?.type === 'transfer' && tx.account_id && tx.to_account_id) {
-      const getBalance = async (accountId: string) => {
-        const { data } = await supabase.from('accounts').select('balance').eq('id', accountId).single()
-        return data?.balance ?? 0
-      }
-      const [fromBal, toBal] = await Promise.all([getBalance(tx.account_id), getBalance(tx.to_account_id)])
-      await Promise.all([
-        supabase.from('accounts').update({ balance: fromBal + tx.amount }).eq('id', tx.account_id),
-        supabase.from('accounts').update({ balance: toBal - tx.amount }).eq('id', tx.to_account_id),
-      ])
-    }
+    const { error } = await supabase.from('transactions').delete().eq('id', id)
+    // Deleting a transaction undoes whatever it did to account balances.
+    if (!error && tx) await applyBalanceDeltas(supabase, negateDeltas(transactionDeltas(tx)))
 
-    await supabase.from('transactions').delete().eq('id', id)
     setDeleteId(null)
     load()
   }

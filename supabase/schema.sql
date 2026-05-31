@@ -16,7 +16,7 @@ create table if not exists public.accounts (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users on delete cascade not null,
   name text not null,
-  type text not null check (type in ('checking', 'savings', 'investment', 'credit', 'cash', 'other')),
+  type text not null check (type in ('checking', 'savings', 'investment', 'credit', 'cash', 'joint', 'other')),
   balance decimal(12,2) default 0,
   currency text default 'GBP',
   color text default '#6366f1',
@@ -35,12 +35,32 @@ create table if not exists public.categories (
   created_at timestamp with time zone default now()
 );
 
+-- Recurring transaction templates (auto-generate transactions each period)
+create table if not exists public.recurring_transactions (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users on delete cascade not null,
+  account_id uuid references public.accounts on delete set null,
+  to_account_id uuid references public.accounts on delete set null,
+  category_id uuid references public.categories on delete set null,
+  type text not null check (type in ('income', 'expense', 'transfer')),
+  amount decimal(12,2) not null check (amount > 0),
+  description text not null,
+  frequency text not null default 'monthly' check (frequency in ('monthly', 'yearly')),
+  day_of_month int not null default 1 check (day_of_month between 1 and 31),
+  start_month int not null check (start_month between 1 and 12),
+  start_year int not null,
+  is_active boolean default true,
+  created_at timestamp with time zone default now()
+);
+
 -- Transactions table
 create table if not exists public.transactions (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users on delete cascade not null,
   account_id uuid references public.accounts on delete set null,
+  to_account_id uuid references public.accounts on delete set null,
   category_id uuid references public.categories on delete set null,
+  recurring_id uuid references public.recurring_transactions on delete set null,
   type text not null check (type in ('income', 'expense', 'transfer')),
   amount decimal(12,2) not null check (amount > 0),
   description text not null,
@@ -67,6 +87,7 @@ create table if not exists public.budgets (
 alter table public.profiles enable row level security;
 alter table public.accounts enable row level security;
 alter table public.categories enable row level security;
+alter table public.recurring_transactions enable row level security;
 alter table public.transactions enable row level security;
 alter table public.budgets enable row level security;
 
@@ -85,6 +106,10 @@ create policy "Users manage own accounts"
 -- Categories
 create policy "Users manage own categories"
   on public.categories for all using (auth.uid() = user_id);
+
+-- Recurring transactions
+create policy "Users manage own recurring"
+  on public.recurring_transactions for all using (auth.uid() = user_id);
 
 -- Transactions
 create policy "Users manage own transactions"
