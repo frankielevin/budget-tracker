@@ -25,7 +25,8 @@ export default function ReportsPage() {
     async function load() {
       const supabase = createClient()
       const [{ data: t }, { data: a }] = await Promise.all([
-        supabase.from('transactions').select('*, account:accounts!account_id(*), to_account:accounts!to_account_id(*), category:categories(*)').order('date', { ascending: true }),
+        // Pending (future-dated) transactions haven't happened yet, so reports ignore them.
+        supabase.from('transactions').select('*, account:accounts!account_id(*), to_account:accounts!to_account_id(*), category:categories(*)').eq('pending', false).order('date', { ascending: true }),
         supabase.from('accounts').select('*'),
       ])
       setTransactions(t || [])

@@ -6,6 +6,7 @@ import { formatCurrency, formatDate, MONTHS } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownRight, AlertTriangle, AlertCircle, CheckCircle, Info } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts'
 import type { Transaction, Account, Category, Budget } from '@/lib/types'
+import { syncTransactions } from '@/lib/recurring'
 import Link from 'next/link'
 
 export default function DashboardPage() {
@@ -23,6 +24,9 @@ export default function DashboardPage() {
   useEffect(() => {
     async function load() {
       const supabase = createClient()
+      // Generate due recurring transactions and activate any that have matured
+      // so balances/totals below reflect everything that has actually happened.
+      await syncTransactions()
       const [{ data: t }, { data: a }, { data: c }, { data: b }] = await Promise.all([
         supabase.from('transactions').select('*, account:accounts!account_id(*), to_account:accounts!to_account_id(*), category:categories(*)').order('date', { ascending: false }),
         supabase.from('accounts').select('*').order('name'),
@@ -40,7 +44,12 @@ export default function DashboardPage() {
 
   const isYear = viewMode === 'year'
 
-  const periodTxns = transactions.filter(t => {
+  // Pending (future-dated) transactions haven't happened yet, so they're
+  // excluded from every total, chart and insight below. They only surface on
+  // the Transactions page until their date arrives.
+  const settled = transactions.filter(t => !t.pending)
+
+  const periodTxns = settled.filter(t => {
     const d = new Date(t.date + 'T00:00:00')
     if (isYear) return d.getFullYear() === selectedYear
     return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear
@@ -65,7 +74,7 @@ export default function DashboardPage() {
 
   const barData = isYear
     ? Array.from({ length: 12 }, (_, i) => {
-        const txns = transactions.filter(t => {
+        const txns = settled.filter(t => {
           const td = new Date(t.date + 'T00:00:00')
           return td.getMonth() === i && td.getFullYear() === selectedYear
         })
@@ -79,7 +88,7 @@ export default function DashboardPage() {
         const d = new Date(selectedYear, selectedMonth - 5 + i, 1)
         const m = d.getMonth()
         const y = d.getFullYear()
-        const txns = transactions.filter(t => {
+        const txns = settled.filter(t => {
           const td = new Date(t.date + 'T00:00:00')
           return td.getMonth() === m && td.getFullYear() === y
         })
@@ -146,7 +155,7 @@ export default function DashboardPage() {
 
     const prevMonth = selectedMonth === 0 ? 11 : selectedMonth - 1
     const prevYear = selectedMonth === 0 ? selectedYear - 1 : selectedYear
-    const prevExpenses = transactions
+    const prevExpenses = settled
       .filter(t => { const d = new Date(t.date + 'T00:00:00'); return d.getMonth() === prevMonth && d.getFullYear() === prevYear && t.type === 'expense' })
       .reduce((s, t) => s + t.amount, 0)
     if (prevExpenses > 0 && monthExpenses > 0) {
@@ -163,7 +172,7 @@ export default function DashboardPage() {
     ...insights.filter(i => i.type === 'info'),
   ].slice(0, 4)
 
-  const recentTxns = transactions.slice(0, 8)
+  const recentTxns = settled.slice(0, 8)
 
   if (loading) {
     return (

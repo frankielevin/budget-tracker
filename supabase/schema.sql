@@ -66,6 +66,9 @@ create table if not exists public.transactions (
   description text not null,
   date date not null default current_date,
   notes text,
+  -- true while a future-dated transaction's balance effect has not yet been
+  -- applied. Cleared (and the balance applied) once its date arrives.
+  pending boolean not null default false,
   created_at timestamp with time zone default now(),
   updated_at timestamp with time zone default now()
 );

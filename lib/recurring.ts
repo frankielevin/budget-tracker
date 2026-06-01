@@ -1,21 +1,56 @@
 import { createClient } from '@/lib/supabase/client'
-import { transactionDeltas, mergeDeltas, applyBalanceDeltas } from '@/lib/balances'
+import { transactionDeltas, mergeDeltas, applyBalanceDeltas, isPendingDate, todayStr } from '@/lib/balances'
 import type { RecurringTransaction } from '@/lib/types'
 
 let generating = false
 
 /**
- * For each active recurring template, generate any transactions that are
- * missing up to and including the current month.
+ * Keep generated transactions in sync: create any missing recurring
+ * transactions, then activate any pending ones whose date has now arrived.
+ * Run this wherever balances or totals are shown.
  */
-export async function generateRecurringTransactions() {
+export async function syncTransactions() {
   if (generating) return
   generating = true
   try {
     await _generate()
+    await _activatePending()
   } finally {
     generating = false
   }
+}
+
+/**
+ * Flip any pending transactions whose date has arrived to active, applying
+ * their balance effect exactly once. The conditional UPDATE means that if two
+ * tabs run this at the same time, only the one that actually flips a row gets
+ * it back — so a delta can't be applied twice.
+ */
+async function _activatePending() {
+  const supabase = createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { data: activated } = await supabase
+    .from('transactions')
+    .update({ pending: false })
+    .eq('pending', true)
+    .lte('date', todayStr())
+    .select('id, type, amount, account_id, to_account_id')
+
+  if (!activated?.length) return
+
+  let deltas: Record<string, number> = {}
+  for (const tx of activated) {
+    deltas = mergeDeltas(deltas, transactionDeltas({
+      type: tx.type,
+      amount: Number(tx.amount),
+      account_id: tx.account_id,
+      to_account_id: tx.to_account_id,
+    }))
+  }
+  await applyBalanceDeltas(supabase, deltas)
 }
 
 async function _generate() {
@@ -53,12 +88,17 @@ async function _generate() {
 
   function buildInsert(t: RecurringTransaction, dateStr: string) {
     const to_account_id = t.type === 'transfer' ? t.to_account_id : null
-    balanceDeltas = mergeDeltas(balanceDeltas, transactionDeltas({
-      type: t.type,
-      amount: t.amount,
-      account_id: t.account_id,
-      to_account_id,
-    }))
+    // Future-dated occurrences are created pending: shown on the transactions
+    // page but not applied to balances until their date arrives.
+    const pending = isPendingDate(dateStr)
+    if (!pending) {
+      balanceDeltas = mergeDeltas(balanceDeltas, transactionDeltas({
+        type: t.type,
+        amount: t.amount,
+        account_id: t.account_id,
+        to_account_id,
+      }))
+    }
     return {
       user_id: user!.id,
       account_id: t.account_id,
@@ -69,6 +109,7 @@ async function _generate() {
       description: t.description,
       date: dateStr,
       recurring_id: t.id,
+      pending,
     }
   }
 

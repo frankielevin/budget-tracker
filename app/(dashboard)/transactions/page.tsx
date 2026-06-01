@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, formatDate, MONTHS } from '@/lib/utils'
-import { Plus, Edit, Trash2, Search, Download, Repeat } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, Download, Repeat, Clock } from 'lucide-react'
 import TransactionModal from '@/components/TransactionModal'
-import { generateRecurringTransactions } from '@/lib/recurring'
+import { syncTransactions } from '@/lib/recurring'
 import { transactionDeltas, negateDeltas, applyBalanceDeltas } from '@/lib/balances'
 import type { Transaction, Account, Category } from '@/lib/types'
 
@@ -27,7 +27,9 @@ export default function TransactionsPage() {
   async function load() {
     const supabase = createClient()
     const [{ data: t }, { data: a }, { data: c }] = await Promise.all([
-      supabase.from('transactions').select('*, account:accounts!account_id(*), to_account:accounts!to_account_id(*), category:categories(*)').order('date', { ascending: false }).order('created_at', { ascending: false }),
+      // Ascending so that within each month section the earliest day sits at
+      // the top and the latest (including upcoming pending ones) at the bottom.
+      supabase.from('transactions').select('*, account:accounts!account_id(*), to_account:accounts!to_account_id(*), category:categories(*)').order('date', { ascending: true }).order('created_at', { ascending: true }),
       supabase.from('accounts').select('*').order('name'),
       supabase.from('categories').select('*').order('name'),
     ])
@@ -38,7 +40,7 @@ export default function TransactionsPage() {
   }
 
   useEffect(() => {
-    generateRecurringTransactions().then(() => load())
+    syncTransactions().then(() => load())
   }, [])
 
   async function handleDelete(id: string) {
@@ -46,8 +48,9 @@ export default function TransactionsPage() {
 
     const tx = transactions.find(t => t.id === id)
     const { error } = await supabase.from('transactions').delete().eq('id', id)
-    // Deleting a transaction undoes whatever it did to account balances.
-    if (!error && tx) await applyBalanceDeltas(supabase, negateDeltas(transactionDeltas(tx)))
+    // Deleting undoes whatever it did to account balances. A pending
+    // transaction never touched any balance, so there's nothing to undo.
+    if (!error && tx && !tx.pending) await applyBalanceDeltas(supabase, negateDeltas(transactionDeltas(tx)))
 
     setDeleteId(null)
     load()
@@ -194,10 +197,18 @@ export default function TransactionsPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {Object.entries(grouped).sort((a, b) => b[0].localeCompare(a[0])).map(([key, txns]) => {
+          {Object.entries(grouped).sort(([a], [b]) => {
+            // Oldest month section first. Compare numerically — the keys use an
+            // un-padded 0-indexed month, so a string compare would mis-order.
+            const [ay, am] = a.split('-').map(Number)
+            const [by, bm] = b.split('-').map(Number)
+            return ay - by || am - bm
+          }).map(([key, txns]) => {
             const [y, m] = key.split('-').map(Number)
-            const groupIncome = txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-            const groupExpenses = txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+            // Pending (future) transactions haven't happened yet, so they
+            // don't count toward the month's income/expense totals.
+            const groupIncome = txns.filter(t => t.type === 'income' && !t.pending).reduce((s, t) => s + t.amount, 0)
+            const groupExpenses = txns.filter(t => t.type === 'expense' && !t.pending).reduce((s, t) => s + t.amount, 0)
 
             return (
               <div key={key}>
@@ -215,10 +226,11 @@ export default function TransactionsPage() {
                     const toAcc = t.to_account as Account | undefined
                     const isTransfer = t.type === 'transfer'
                     const dotColor = isTransfer ? '#3b82f6' : (cat?.color || '#6b7280')
+                    const isPending = t.pending
                     return (
                       <div
                         key={t.id}
-                        className={`flex items-center gap-4 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${i < txns.length - 1 ? 'border-b border-slate-100 dark:border-slate-700/50' : ''}`}
+                        className={`flex items-center gap-4 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${i < txns.length - 1 ? 'border-b border-slate-100 dark:border-slate-700/50' : ''} ${isPending ? 'opacity-55' : ''}`}
                       >
                         <div
                           className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
@@ -230,6 +242,12 @@ export default function TransactionsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{t.description}</p>
+                            {isPending && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded text-xs font-medium shrink-0">
+                                <Clock size={10} />
+                                Pending
+                              </span>
+                            )}
                             {t.recurring_id && (
                               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 rounded text-xs font-medium shrink-0">
                                 <Repeat size={10} />

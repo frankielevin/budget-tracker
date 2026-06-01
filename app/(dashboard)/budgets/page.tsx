@@ -26,7 +26,8 @@ export default function BudgetsPage() {
     const [{ data: b }, { data: c }, { data: t }] = await Promise.all([
       supabase.from('budgets').select('*, category:categories(*)'),
       supabase.from('categories').select('*').order('name'),
-      supabase.from('transactions').select('category_id, amount, date').eq('type', 'expense'),
+      // Exclude pending (future-dated) expenses — they haven't been spent yet.
+      supabase.from('transactions').select('category_id, amount, date').eq('type', 'expense').eq('pending', false),
     ])
 
     setBudgets(b || [])

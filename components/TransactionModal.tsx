@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { X, AlertCircle, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { transactionDeltas, mergeDeltas, negateDeltas, applyBalanceDeltas } from '@/lib/balances'
+import { transactionDeltas, mergeDeltas, negateDeltas, applyBalanceDeltas, isPendingDate } from '@/lib/balances'
 import type { Transaction, Account, Category, TransactionType } from '@/lib/types'
 
 interface Props {
@@ -56,6 +56,10 @@ export default function TransactionModal({ transaction, accounts, categories, on
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
+    // A future-dated transaction is pending: shown but not yet applied to
+    // balances until its date arrives.
+    const pending = isPendingDate(form.date)
+
     const payload = {
       user_id: user.id,
       type: form.type,
@@ -66,10 +70,12 @@ export default function TransactionModal({ transaction, accounts, categories, on
       to_account_id: isTransfer ? (form.to_account_id || null) : null,
       category_id: isTransfer ? null : (form.category_id || null),
       notes: form.notes.trim() || null,
+      pending,
     }
 
-    // The balance impact of the transaction as it will be saved.
-    const newEffect = transactionDeltas({
+    // The balance impact of the new version — but only if it's active now.
+    // Pending transactions contribute nothing until they're activated.
+    const newEffect = pending ? {} : transactionDeltas({
       type: form.type as TransactionType,
       amount,
       account_id: payload.account_id,
@@ -80,8 +86,9 @@ export default function TransactionModal({ transaction, accounts, categories, on
     if (transaction) {
       ;({ error } = await supabase.from('transactions').update(payload).eq('id', transaction.id))
       if (!error) {
-        // Undo the previous version's effect, then apply the new one.
-        const oldEffect = transactionDeltas(transaction)
+        // Undo whatever the previous version had applied (nothing, if it was
+        // pending), then apply the new effect.
+        const oldEffect = transaction.pending ? {} : transactionDeltas(transaction)
         await applyBalanceDeltas(supabase, mergeDeltas(negateDeltas(oldEffect), newEffect))
       }
     } else {

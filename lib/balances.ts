@@ -3,6 +3,22 @@ import type { TransactionType } from '@/lib/types'
 
 type SupabaseClient = ReturnType<typeof createClient>
 
+/** Today's local date as a `YYYY-MM-DD` string (matches how dates are stored). */
+export function todayStr(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * Whether a transaction dated `dateStr` is still in the future, i.e. it
+ * hasn't happened yet and so should not affect balances. Dates are stored as
+ * `YYYY-MM-DD`, which sorts chronologically as plain strings. A transaction
+ * dated today counts as active (not pending).
+ */
+export function isPendingDate(dateStr: string): boolean {
+  return dateStr > todayStr()
+}
+
 /** Minimal shape needed to know how a transaction moves account balances. */
 export interface BalanceEffect {
   type: TransactionType

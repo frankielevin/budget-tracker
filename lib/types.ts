@@ -70,6 +70,7 @@ export interface Transaction {
   date: string
   notes: string | null
   recurring_id: string | null
+  pending: boolean
   created_at: string
   updated_at: string
   account?: Account
