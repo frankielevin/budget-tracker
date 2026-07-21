@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { X, AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { ACCOUNT_COLORS } from '@/lib/utils'
-import type { Category } from '@/lib/types'
+import type { Category, CategoryType } from '@/lib/types'
 
 interface Props {
   category?: Category | null
@@ -12,10 +12,35 @@ interface Props {
   onSave: () => void
 }
 
+const CATEGORY_TYPES: { value: CategoryType; label: string; hint: string; accent: string; dot: string }[] = [
+  {
+    value: 'expense',
+    label: 'Money out',
+    hint: 'Spending. Anything paid back to you reduces what this category cost.',
+    accent: 'bg-red-50 dark:bg-red-900/20 border-red-400',
+    dot: 'bg-red-500 border-red-500',
+  },
+  {
+    value: 'income',
+    label: 'Money in',
+    hint: 'Earnings — salary, dividends, revenue. Never cancelled against spending.',
+    accent: 'bg-green-50 dark:bg-green-900/20 border-green-400',
+    dot: 'bg-green-500 border-green-500',
+  },
+  {
+    value: 'both',
+    label: 'Both',
+    hint: 'Earns and costs, like a side project. The two sides stay separate.',
+    accent: 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-400',
+    dot: 'bg-indigo-500 border-indigo-500',
+  },
+]
+
 export default function CategoryModal({ category, onClose, onSave }: Props) {
   const [form, setForm] = useState({
     name: category?.name || '',
     color: category?.color || '#6366f1',
+    type: category?.type || 'expense' as CategoryType,
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -39,6 +64,7 @@ export default function CategoryModal({ category, onClose, onSave }: Props) {
       user_id: user.id,
       name: form.name.trim(),
       color: form.color,
+      type: form.type,
     }
 
     let error
@@ -61,7 +87,7 @@ export default function CategoryModal({ category, onClose, onSave }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             {category ? 'Edit Category' : 'Add Category'}
@@ -82,6 +108,41 @@ export default function CategoryModal({ category, onClose, onSave }: Props) {
           <div>
             <label className={labelClass}>Category name</label>
             <input type="text" value={form.name} onChange={e => update('name', e.target.value)} required className={inputClass} placeholder="e.g. Groceries" />
+          </div>
+
+          {/* All three explained at once — the choice changes how totals are
+              calculated, so it shouldn't be something you can skip past. */}
+          <div>
+            <label className={labelClass}>What is this category for?</label>
+            <div className="space-y-2">
+              {CATEGORY_TYPES.map(t => {
+                const selected = form.type === t.value
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => update('type', t.value)}
+                    className={`w-full text-left rounded-lg border-2 px-3 py-2.5 transition-colors cursor-pointer ${
+                      selected
+                        ? t.accent
+                        : 'border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 ${selected ? t.dot : 'border-slate-300 dark:border-slate-500'}`} />
+                      <span className="text-sm font-medium text-slate-900 dark:text-white">{t.label}</span>
+                    </span>
+                    <span className="block text-xs text-slate-500 dark:text-slate-400 mt-1 pl-[22px] leading-snug">
+                      {t.hint}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-xs text-slate-400 mt-2 leading-snug">
+              Example: a £100 shop with £40 paid back shows as £60 spent under <strong>Money out</strong>.
+              Under <strong>Money in</strong> or <strong>Both</strong> it would show £100 spent and £40 earned.
+            </p>
           </div>
 
           <div>

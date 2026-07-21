@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, MONTHS } from '@/lib/utils'
 import { Plus, Edit, Trash2 } from 'lucide-react'
 import BudgetModal from '@/components/BudgetModal'
+import { spentByCategory as netSpentByCategory, categoryTypeLookup } from '@/lib/categoryTotals'
 import type { Budget, Category } from '@/lib/types'
 
 export default function BudgetsPage() {
@@ -26,21 +27,21 @@ export default function BudgetsPage() {
     const [{ data: b }, { data: c }, { data: t }] = await Promise.all([
       supabase.from('budgets').select('*, category:categories(*)'),
       supabase.from('categories').select('*').order('name'),
-      // Exclude pending (future-dated) expenses — they haven't been spent yet.
-      supabase.from('transactions').select('category_id, amount, date').eq('type', 'expense').eq('pending', false),
+      // Income is pulled in alongside expenses so a reimbursed purchase doesn't
+      // eat the budget. Pending (future-dated) rows are excluded — not spent yet.
+      supabase.from('transactions').select('category_id, amount, date, type').in('type', ['expense', 'income']).eq('pending', false),
     ])
 
     setBudgets(b || [])
     setCategories(c || [])
 
-    const spent: Record<string, number> = {}
-    for (const tx of t || []) {
-      if (!tx.category_id) continue
+    const inPeriod = (t || []).filter(tx => {
       const d = new Date(tx.date + 'T00:00:00')
-      if (d.getMonth() !== selectedMonth || d.getFullYear() !== selectedYear) continue
-      spent[tx.category_id] = (spent[tx.category_id] || 0) + tx.amount
-    }
-    setSpentByCategory(spent)
+      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear
+    })
+    // This query selects transaction columns only, so category types are
+    // supplied separately rather than coming through a join.
+    setSpentByCategory(netSpentByCategory(inPeriod, categoryTypeLookup(c || [])))
     setLoading(false)
   }
 

@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { X, AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { ACCOUNT_COLORS } from '@/lib/utils'
+import { todayStr } from '@/lib/balances'
+import { ACCOUNT_COLORS, formatCurrency } from '@/lib/utils'
 import type { Account, AccountType } from '@/lib/types'
 
 interface Props {
@@ -23,14 +24,23 @@ const ACCOUNT_TYPES: { value: AccountType; label: string }[] = [
 ]
 
 export default function AccountModal({ account, onClose, onSave }: Props) {
+  // The balance as it stood when the form opened. Used to tell "the user
+  // retyped this" apart from "the user never touched it".
+  const initialBalance = account?.balance?.toString() || '0'
   const [form, setForm] = useState({
     name: account?.name || '',
     type: account?.type || 'checking' as AccountType,
-    balance: account?.balance?.toString() || '0',
+    balance: initialBalance,
     color: account?.color || '#6366f1',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const balanceChanged = !!account && form.balance !== initialBalance
+  const adjustment = balanceChanged ? (parseFloat(form.balance) || 0) - (account?.balance || 0) : 0
+  // A credit account holding a positive balance is legitimate (you've overpaid)
+  // but far more often it means the debt was typed without a minus sign.
+  const suspiciousCreditSign = form.type === 'credit' && (parseFloat(form.balance) || 0) > 0
 
   function update(field: string, value: string) {
     setForm(f => ({ ...f, [field]: value }))
@@ -51,15 +61,38 @@ export default function AccountModal({ account, onClose, onSave }: Props) {
       user_id: user.id,
       name: form.name.trim(),
       type: form.type,
-      balance: parseFloat(form.balance) || 0,
       color: form.color,
     }
 
     let error
     if (account) {
-      ;({ error } = await supabase.from('accounts').update(payload).eq('id', account.id))
+      // Only write `balance` when it was actually edited. Balances are otherwise
+      // derived from transactions, so blindly re-saving the value this form
+      // opened with would clobber anything that moved in the meantime.
+      ;({ error } = await supabase
+        .from('accounts')
+        .update(balanceChanged ? { ...payload, balance: parseFloat(form.balance) || 0 } : payload)
+        .eq('id', account.id))
+
+      // Record what the correction was, so the ledger still explains the
+      // balance instead of silently disagreeing with it.
+      if (!error && balanceChanged && adjustment !== 0) {
+        await supabase.from('transactions').insert({
+          user_id: user.id,
+          account_id: account.id,
+          to_account_id: null,
+          category_id: null,
+          type: adjustment > 0 ? 'income' : 'expense',
+          amount: Math.abs(adjustment),
+          description: 'Balance adjustment',
+          date: todayStr(),
+          notes: `Manual correction from ${account.balance.toFixed(2)} to ${(parseFloat(form.balance) || 0).toFixed(2)}`,
+          pending: false,
+        })
+      }
     } else {
-      ;({ error } = await supabase.from('accounts').insert(payload))
+      // A new account's balance is its opening position — nothing to reconcile.
+      ;({ error } = await supabase.from('accounts').insert({ ...payload, balance: parseFloat(form.balance) || 0 }))
     }
 
     if (error) {
@@ -108,12 +141,27 @@ export default function AccountModal({ account, onClose, onSave }: Props) {
           </div>
 
           <div>
-            <label className={labelClass}>Current balance</label>
+            <label className={labelClass}>{account ? 'Current balance' : 'Opening balance'}</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">£</span>
               <input type="number" step="0.01" value={form.balance} onChange={e => update('balance', e.target.value)} className={`${inputClass} pl-7`} placeholder="0.00" />
             </div>
             <p className="text-xs text-slate-400 mt-1">Enter negative value for credit card debt</p>
+
+            {suspiciousCreditSign && (
+              <p className="text-xs text-amber-600 mt-1.5">
+                This is a credit card with a positive balance, which counts towards your net worth.
+                If you owe {formatCurrency(Math.abs(parseFloat(form.balance) || 0))}, enter it as a negative.
+              </p>
+            )}
+
+            {balanceChanged && adjustment !== 0 && (
+              <p className="text-xs text-indigo-600 mt-1.5">
+                Balances normally come from your transactions. Saving this will record a
+                &ldquo;Balance adjustment&rdquo; of {adjustment > 0 ? '+' : '−'}{formatCurrency(Math.abs(adjustment))} dated
+                today, so your transaction history still adds up.
+              </p>
+            )}
           </div>
 
           <div>

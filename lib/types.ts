@@ -1,5 +1,10 @@
 export type AccountType = 'checking' | 'savings' | 'investment' | 'credit' | 'cash' | 'joint' | 'other'
 export type TransactionType = 'income' | 'expense' | 'transfer'
+/**
+ * What a category is for. Only 'expense' categories net incoming money against
+ * their spending — see `lib/categoryTotals.ts`.
+ */
+export type CategoryType = 'income' | 'expense' | 'both'
 
 export interface Profile {
   id: string
@@ -35,6 +40,7 @@ export interface Category {
   name: string
   color: string
   icon: string
+  type: CategoryType
   created_at: string
 }
 

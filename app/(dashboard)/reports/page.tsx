@@ -8,7 +8,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
   LineChart, Line,
 } from 'recharts'
-import type { Transaction, Account, Category } from '@/lib/types'
+import type { Transaction, Account } from '@/lib/types'
+import { netTotals, spendingBreakdown, incomeBreakdown } from '@/lib/categoryTotals'
 
 export default function ReportsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -42,23 +43,10 @@ export default function ReportsPage() {
     return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear
   })
 
-  const expenseMap: Record<string, { name: string; value: number; color: string }> = {}
-  for (const t of monthTxns.filter(tx => tx.type === 'expense')) {
-    const cat = t.category as Category | undefined
-    const key = t.category_id || 'uncategorized'
-    if (!expenseMap[key]) expenseMap[key] = { name: cat?.name || 'Uncategorised', value: 0, color: cat?.color || '#6b7280' }
-    expenseMap[key].value += t.amount
-  }
-  const pieData = Object.values(expenseMap).sort((a, b) => b.value - a.value)
-
-  const incomeMap: Record<string, { name: string; value: number; color: string }> = {}
-  for (const t of monthTxns.filter(tx => tx.type === 'income')) {
-    const cat = t.category as Category | undefined
-    const key = t.category_id || 'uncategorized'
-    if (!incomeMap[key]) incomeMap[key] = { name: cat?.name || 'Uncategorised', value: 0, color: cat?.color || '#22c55e' }
-    incomeMap[key].value += t.amount
-  }
-  const incomePieData = Object.values(incomeMap).sort((a, b) => b.value - a.value)
+  // Every figure below nets income against expenses within each category, so a
+  // reimbursed purchase doesn't count as both spending and earnings.
+  const pieData = spendingBreakdown(monthTxns)
+  const incomePieData = incomeBreakdown(monthTxns)
 
   const monthlyData = Array.from({ length: 12 }, (_, i) => {
     const d = new Date(selectedYear, selectedMonth - 11 + i, 1)
@@ -68,44 +56,48 @@ export default function ReportsPage() {
       const td = new Date(t.date + 'T00:00:00')
       return td.getMonth() === m && td.getFullYear() === y
     })
-    const income = txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-    const expenses = txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-    return { month: MONTHS[m].slice(0, 3) + " '" + String(y).slice(2), income, expenses }
+    return { month: MONTHS[m].slice(0, 3) + " '" + String(y).slice(2), ...netTotals(txns) }
   })
 
   const baseNetWorth = accounts.reduce((s, a) => s + a.balance, 0)
-  const netWorthData = (() => {
-    let val = baseNetWorth
-    for (let i = 1; i <= 11; i++) {
-      const d = new Date(selectedYear, selectedMonth - 11 + i, 1)
-      const m = d.getMonth()
-      const y = d.getFullYear()
-      const txns = transactions.filter(t => { const td = new Date(t.date + 'T00:00:00'); return td.getMonth() === m && td.getFullYear() === y })
-      val -= txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0) - txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+
+  // Earliest transaction on record. Months before this are genuine unknowns —
+  // account balances only tell us where things stand *now*.
+  const firstTxDate = transactions.reduce<string | null>(
+    (min, t) => (min === null || t.date < min ? t.date : min), null
+  )
+
+  const netWorthData = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(selectedYear, selectedMonth - 11 + i, 1)
+    const m = d.getMonth()
+    const y = d.getFullYear()
+    const label = MONTHS[m].slice(0, 3) + " '" + String(y).slice(2)
+    const monthEnd = `${y}-${String(m + 1).padStart(2, '0')}-${String(new Date(y, m + 1, 0).getDate()).padStart(2, '0')}`
+
+    // Leave a gap rather than projecting today's balance back into months we
+    // have no record of — a flat line there reads as "stable", not "unknown".
+    if (!firstTxDate || monthEnd < firstTxDate) return { month: label, value: null }
+
+    // Net worth at this month's end = today's total, minus everything that has
+    // happened since. Derived from the full transaction set rather than just
+    // the visible window, so it stays correct for any selected month.
+    //
+    // Raw amounts are fine here: netting only moves an equal sum off both the
+    // income and expense side, so the difference this relies on is identical.
+    let since = 0
+    for (const t of transactions) {
+      if (t.date <= monthEnd) continue
+      if (t.type === 'income') since += t.amount
+      else if (t.type === 'expense') since -= t.amount
     }
-    const result = []
-    for (let i = 0; i < 12; i++) {
-      const d = new Date(selectedYear, selectedMonth - 11 + i, 1)
-      const m = d.getMonth()
-      const y = d.getFullYear()
-      if (i > 0) {
-        const txns = transactions.filter(t => { const td = new Date(t.date + 'T00:00:00'); return td.getMonth() === m && td.getFullYear() === y })
-        val += txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0) - txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-      }
-      result.push({ month: MONTHS[m].slice(0, 3) + " '" + String(y).slice(2), value: val })
-    }
-    return result
-  })()
+    return { month: label, value: baseNetWorth - since }
+  })
 
   const yoyData = Array.from({ length: 12 }, (_, i) => {
     const m = i
-    const getTotals = (y: number) => {
-      const txns = transactions.filter(t => { const td = new Date(t.date + 'T00:00:00'); return td.getMonth() === m && td.getFullYear() === y })
-      return {
-        income: txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
-        expenses: txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
-      }
-    }
+    const getTotals = (y: number) => netTotals(
+      transactions.filter(t => { const td = new Date(t.date + 'T00:00:00'); return td.getMonth() === m && td.getFullYear() === y })
+    )
     const cur = getTotals(selectedYear)
     const prev = getTotals(selectedYear - 1)
     return {
@@ -135,8 +127,7 @@ export default function ReportsPage() {
     )
   }
 
-  const totalIncome = monthTxns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const totalExpenses = monthTxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const { income: totalIncome, expenses: totalExpenses } = netTotals(monthTxns)
   const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome * 100).toFixed(1) : '0'
 
   const dateSelectClass = 'bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 font-medium rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
@@ -230,7 +221,7 @@ export default function ReportsPage() {
 
       {/* Net worth trend */}
       <ChartCard title="Net Worth Trend — Last 12 Months" className="mb-4">
-        {netWorthData.every(d => d.value === netWorthData[0].value) && netWorthData[0].value === 0 ? (
+        {netWorthData.every(d => d.value === null) ? (
           <EmptyChart text="Add accounts and transactions to see your net worth trend" />
         ) : (
           <ResponsiveContainer width="100%" height={220}>
@@ -239,7 +230,7 @@ export default function ReportsPage() {
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `£${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}`} />
               <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-              <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2.5} dot={{ fill: '#6366f1', r: 3 }} name="Net Worth" />
+              <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2.5} dot={{ fill: '#6366f1', r: 3 }} name="Net Worth" connectNulls={false} />
             </LineChart>
           </ResponsiveContainer>
         )}
@@ -325,7 +316,7 @@ function EmptyChart({ text }: { text: string }) {
 
 function PieChartWithLegend({ data }: { data: { name: string; value: number; color: string }[] }) {
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-start gap-4">
       <ResponsiveContainer width={160} height={160}>
         <PieChart>
           <Pie data={data} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={2} dataKey="value">
@@ -336,8 +327,9 @@ function PieChartWithLegend({ data }: { data: { name: string; value: number; col
           <Tooltip formatter={(v) => formatCurrency(Number(v))} />
         </PieChart>
       </ResponsiveContainer>
+      {/* Full list, matching the dashboard — the pie already draws every slice. */}
       <div className="flex-1 space-y-1.5 overflow-hidden">
-        {data.slice(0, 8).map((d, i) => (
+        {data.map((d, i) => (
           <div key={i} className="flex items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-1.5 min-w-0">
               <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />

@@ -222,6 +222,18 @@ export default function TransactionModal({ transaction, accounts, categories, on
             </>
           )}
 
+          {/* Notes */}
+          <div>
+            <label className={labelClass}>Notes <span className="text-slate-400 font-normal">(optional)</span></label>
+            <textarea
+              value={form.notes}
+              onChange={e => update('notes', e.target.value)}
+              rows={2}
+              className={`${inputClass} resize-y`}
+              placeholder="Anything worth remembering about this one"
+            />
+          </div>
+
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer">
               Cancel

@@ -35,19 +35,21 @@ interface SidebarProps {
   displayName?: string | null
 }
 
-export default function Sidebar({ username, email, displayName }: SidebarProps) {
-  const pathname = usePathname()
-  const router = useRouter()
-  const [mobileOpen, setMobileOpen] = useState(false)
-
-  async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
-  }
-
-  const SidebarContent = () => (
+/**
+ * Defined at module level rather than inside `Sidebar`. A component declared in
+ * the render body is a new type on every render, so React unmounts and remounts
+ * this whole subtree each time — harmless while it holds no state, but it would
+ * silently reset anything added later (a collapsed section, focus, a scroll
+ * position).
+ */
+function SidebarContent({
+  pathname, username, email, displayName, onNavigate, onLogout,
+}: SidebarProps & {
+  pathname: string
+  onNavigate: () => void
+  onLogout: () => void
+}) {
+  return (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-6 py-5 border-b border-slate-800">
@@ -67,7 +69,7 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
             <Link
               key={href}
               href={href}
-              onClick={() => setMobileOpen(false)}
+              onClick={onNavigate}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 active
                   ? 'bg-indigo-600 text-white'
@@ -88,7 +90,7 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
           <p className="text-slate-500 text-xs truncate">{displayName ? `@${username}` : email}</p>
         </div>
         <button
-          onClick={handleLogout}
+          onClick={onLogout}
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
         >
           <LogOut size={18} />
@@ -97,12 +99,34 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
       </div>
     </div>
   )
+}
+
+export default function Sidebar({ username, email, displayName }: SidebarProps) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  async function handleLogout() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
+
+  const contentProps = {
+    pathname,
+    username,
+    email,
+    displayName,
+    onNavigate: () => setMobileOpen(false),
+    onLogout: handleLogout,
+  }
 
   return (
     <>
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col w-60 bg-slate-900 border-r border-slate-800 shrink-0 h-screen sticky top-0">
-        <SidebarContent />
+        <SidebarContent {...contentProps} />
       </aside>
 
       {/* Mobile top bar */}
@@ -129,7 +153,7 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
             >
               <X size={20} />
             </button>
-            <SidebarContent />
+            <SidebarContent {...contentProps} />
           </div>
         </div>
       )}

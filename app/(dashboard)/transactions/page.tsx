@@ -7,7 +7,17 @@ import { Plus, Edit, Trash2, Search, Download, Repeat, Clock } from 'lucide-reac
 import TransactionModal from '@/components/TransactionModal'
 import { syncTransactions } from '@/lib/recurring'
 import { transactionDeltas, negateDeltas, applyBalanceDeltas } from '@/lib/balances'
+import { netTotals } from '@/lib/categoryTotals'
 import type { Transaction, Account, Category } from '@/lib/types'
+
+/** Month-section key for a date: `YYYY-M` with a 0-indexed month. */
+function monthKey(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  return `${d.getFullYear()}-${d.getMonth()}`
+}
+
+const now = new Date()
+const currentMonthKey = `${now.getFullYear()}-${now.getMonth()}`
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -22,14 +32,17 @@ export default function TransactionsPage() {
   const [filterType, setFilterType] = useState('all')
   const [filterCategory, setFilterCategory] = useState('all')
   const [filterAccount, setFilterAccount] = useState('all')
-  const [filterMonth, setFilterMonth] = useState<string>('all')
+  // Default to the current month — the page opens on what you're spending now,
+  // not on your entire history.
+  const [filterMonth, setFilterMonth] = useState<string>(currentMonthKey)
 
   async function load() {
     const supabase = createClient()
     const [{ data: t }, { data: a }, { data: c }] = await Promise.all([
-      // Ascending so that within each month section the earliest day sits at
-      // the top and the latest (including upcoming pending ones) at the bottom.
-      supabase.from('transactions').select('*, account:accounts!account_id(*), to_account:accounts!to_account_id(*), category:categories(*)').order('date', { ascending: true }).order('created_at', { ascending: true }),
+      // Descending so the most recent activity sits at the top of each month
+      // section. Upcoming (pending) rows are moved to the end of their section
+      // when the groups are built below.
+      supabase.from('transactions').select('*, account:accounts!account_id(*), to_account:accounts!to_account_id(*), category:categories(*)').order('date', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('accounts').select('*').order('name'),
       supabase.from('categories').select('*').order('name'),
     ])
@@ -59,12 +72,10 @@ export default function TransactionsPage() {
   const filtered = transactions.filter(t => {
     if (filterType !== 'all' && t.type !== filterType) return false
     if (filterCategory !== 'all' && t.category_id !== filterCategory) return false
-    if (filterAccount !== 'all' && t.account_id !== filterAccount) return false
-    if (filterMonth !== 'all') {
-      const [y, m] = filterMonth.split('-').map(Number)
-      const d = new Date(t.date + 'T00:00:00')
-      if (d.getFullYear() !== y || d.getMonth() !== m) return false
-    }
+    // Match either side of a transfer, so filtering by an account also shows
+    // money moving *into* it.
+    if (filterAccount !== 'all' && t.account_id !== filterAccount && t.to_account_id !== filterAccount) return false
+    if (filterMonth !== 'all' && monthKey(t.date) !== filterMonth) return false
     if (search) {
       const q = search.toLowerCase()
       if (!t.description.toLowerCase().includes(q) && !(t.notes || '').toLowerCase().includes(q)) return false
@@ -74,16 +85,30 @@ export default function TransactionsPage() {
 
   const grouped: Record<string, Transaction[]> = {}
   for (const t of filtered) {
-    const d = new Date(t.date + 'T00:00:00')
-    const key = `${d.getFullYear()}-${d.getMonth()}`
+    const key = monthKey(t.date)
     if (!grouped[key]) grouped[key] = []
     grouped[key].push(t)
   }
+  // `filtered` is newest-first. Within each month show settled rows that way,
+  // then park upcoming (pending) rows at the end, soonest first — they haven't
+  // happened yet, so they shouldn't head the list.
+  for (const key of Object.keys(grouped)) {
+    const rows = grouped[key]
+    grouped[key] = [
+      ...rows.filter(t => !t.pending),
+      ...rows.filter(t => t.pending).reverse(),
+    ]
+  }
 
-  const availableMonths = Array.from(new Set(transactions.map(t => {
-    const d = new Date(t.date + 'T00:00:00')
-    return `${d.getFullYear()}-${d.getMonth()}`
-  }))).sort((a, b) => b.localeCompare(a))
+  // Always offer the current month, even before anything is recorded in it —
+  // it's the default selection, so it must exist as an option.
+  const availableMonths = Array.from(
+    new Set([currentMonthKey, ...transactions.map(t => monthKey(t.date))])
+  ).sort((a, b) => {
+    const [ay, am] = a.split('-').map(Number)
+    const [by, bm] = b.split('-').map(Number)
+    return by - ay || bm - am
+  })
 
   function exportCSV() {
     const headers = ['Date', 'Description', 'Type', 'Amount (£)', 'Category', 'Account', 'Notes']
@@ -126,7 +151,11 @@ export default function TransactionsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Transactions</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">{transactions.length} total</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+            {filtered.length === transactions.length
+              ? `${transactions.length} total`
+              : `${filtered.length} shown of ${transactions.length} total`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -198,17 +227,18 @@ export default function TransactionsPage() {
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).sort(([a], [b]) => {
-            // Oldest month section first. Compare numerically — the keys use an
+            // Newest month section first. Compare numerically — the keys use an
             // un-padded 0-indexed month, so a string compare would mis-order.
             const [ay, am] = a.split('-').map(Number)
             const [by, bm] = b.split('-').map(Number)
-            return ay - by || am - bm
+            return by - ay || bm - am
           }).map(([key, txns]) => {
             const [y, m] = key.split('-').map(Number)
-            // Pending (future) transactions haven't happened yet, so they
-            // don't count toward the month's income/expense totals.
-            const groupIncome = txns.filter(t => t.type === 'income' && !t.pending).reduce((s, t) => s + t.amount, 0)
-            const groupExpenses = txns.filter(t => t.type === 'expense' && !t.pending).reduce((s, t) => s + t.amount, 0)
+            // Pending (future) transactions haven't happened yet, so they don't
+            // count. Totals are netted per category to match the rest of the
+            // app, so a reimbursed purchase isn't counted on both sides — which
+            // is why these won't equal a raw sum of the rows below.
+            const { income: groupIncome, expenses: groupExpenses } = netTotals(txns.filter(t => !t.pending))
 
             return (
               <div key={key}>

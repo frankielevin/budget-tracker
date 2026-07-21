@@ -3,16 +3,16 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, formatDate, MONTHS } from '@/lib/utils'
-import { TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownRight, AlertTriangle, AlertCircle, CheckCircle, Info } from 'lucide-react'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts'
+import { TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownRight, AlertTriangle, AlertCircle, CheckCircle, Info, Clock } from 'lucide-react'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import type { Transaction, Account, Category, Budget } from '@/lib/types'
+import { netTotals, spendingBreakdown, spentByCategory } from '@/lib/categoryTotals'
 import { syncTransactions } from '@/lib/recurring'
 import Link from 'next/link'
 
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'month' | 'year'>('month')
@@ -27,15 +27,15 @@ export default function DashboardPage() {
       // Generate due recurring transactions and activate any that have matured
       // so balances/totals below reflect everything that has actually happened.
       await syncTransactions()
-      const [{ data: t }, { data: a }, { data: c }, { data: b }] = await Promise.all([
+      // Categories aren't fetched separately — every transaction already carries
+      // its own via the join, and budgets carry theirs.
+      const [{ data: t }, { data: a }, { data: b }] = await Promise.all([
         supabase.from('transactions').select('*, account:accounts!account_id(*), to_account:accounts!to_account_id(*), category:categories(*)').order('date', { ascending: false }),
         supabase.from('accounts').select('*').order('name'),
-        supabase.from('categories').select('*').order('name'),
         supabase.from('budgets').select('*, category:categories(*)'),
       ])
       setTransactions(t || [])
       setAccounts(a || [])
-      setCategories(c || [])
       setBudgets(b || [])
       setLoading(false)
     }
@@ -49,55 +49,49 @@ export default function DashboardPage() {
   // the Transactions page until their date arrives.
   const settled = transactions.filter(t => !t.pending)
 
-  const periodTxns = settled.filter(t => {
-    const d = new Date(t.date + 'T00:00:00')
+  const inPeriod = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00')
     if (isYear) return d.getFullYear() === selectedYear
     return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear
-  })
+  }
 
-  const monthIncome = periodTxns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const monthExpenses = periodTxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const periodTxns = settled.filter(t => inPeriod(t.date))
+
+  // Income and expenses are netted per category, so money paid back to you
+  // cancels the purchase it reimburses instead of inflating both sides.
+  const { income: monthIncome, expenses: monthExpenses } = netTotals(periodTxns)
   const netWorth = accounts.reduce((s, a) => s + a.balance, 0)
   const savings = monthIncome - monthExpenses
 
-  const expenseTxns = periodTxns.filter(t => t.type === 'expense')
-  const categoryMap: Record<string, { name: string; value: number; color: string }> = {}
-  for (const t of expenseTxns) {
-    const catId = t.category_id || 'uncategorized'
-    const cat = t.category as Category | undefined
-    const name = cat?.name || 'Uncategorised'
-    const color = cat?.color || '#6b7280'
-    if (!categoryMap[catId]) categoryMap[catId] = { name, value: 0, color }
-    categoryMap[catId].value += t.amount
-  }
-  const pieData = Object.values(categoryMap).sort((a, b) => b.value - a.value)
+  const pieData = spendingBreakdown(periodTxns)
 
-  const barData = isYear
-    ? Array.from({ length: 12 }, (_, i) => {
-        const txns = settled.filter(t => {
-          const td = new Date(t.date + 'T00:00:00')
-          return td.getMonth() === i && td.getFullYear() === selectedYear
-        })
-        return {
-          month: MONTHS[i].slice(0, 3),
-          income: txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
-          expenses: txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
-        }
-      })
-    : Array.from({ length: 6 }, (_, i) => {
-        const d = new Date(selectedYear, selectedMonth - 5 + i, 1)
-        const m = d.getMonth()
-        const y = d.getFullYear()
-        const txns = settled.filter(t => {
-          const td = new Date(t.date + 'T00:00:00')
-          return td.getMonth() === m && td.getFullYear() === y
-        })
-        return {
-          month: MONTHS[m].slice(0, 3),
-          income: txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
-          expenses: txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
-        }
-      })
+  // The equivalent period before this one, for the at-a-glance comparisons on
+  // the stat cards. A bare total says little; the direction of travel says a lot.
+  const prevMonth = selectedMonth === 0 ? 11 : selectedMonth - 1
+  const prevMonthYear = selectedMonth === 0 ? selectedYear - 1 : selectedYear
+  const prevTxns = settled.filter(t => {
+    const d = new Date(t.date + 'T00:00:00')
+    if (isYear) return d.getFullYear() === selectedYear - 1
+    return d.getMonth() === prevMonth && d.getFullYear() === prevMonthYear
+  })
+  const prev = netTotals(prevTxns)
+  const prevSavings = prev.income - prev.expenses
+  const hasPrev = prevTxns.length > 0
+  const periodWord = isYear ? 'year' : 'month'
+  const compare = (previous: number) =>
+    hasPrev ? `vs ${formatCurrency(previous)} last ${periodWord}` : `No last-${periodWord} data`
+  const signed = (n: number) => `${n >= 0 ? '+' : '−'}${formatCurrency(Math.abs(n))}`
+
+  // Money already scheduled but not yet applied. Excluded from every total
+  // above — correctly, since it hasn't happened — but it's the most decision-
+  // relevant thing on the page, so it gets its own card rather than vanishing.
+  const upcoming = transactions
+    .filter(t => t.pending && inPeriod(t.date))
+    .sort((a, b) => a.date.localeCompare(b.date))
+  const upcomingSpend = upcoming.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const upcomingTransfers = upcoming.filter(t => t.type === 'transfer').reduce((s, t) => s + t.amount, 0)
+  const upcomingIncome = upcoming.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+  const upcomingLeaving = upcomingSpend + upcomingTransfers
 
   interface Insight {
     id: string
@@ -107,11 +101,10 @@ export default function DashboardPage() {
   }
   const insights: Insight[] = []
 
+  // Budgets are monthly limits, so budget insights only make sense in month
+  // view. Everything after this block works for either period.
   if (!isYear) {
-    const spentByCat: Record<string, number> = {}
-    for (const t of periodTxns.filter(tx => tx.type === 'expense')) {
-      if (t.category_id) spentByCat[t.category_id] = (spentByCat[t.category_id] || 0) + t.amount
-    }
+    const spentByCat = spentByCategory(periodTxns)
 
     const overBudget = budgets.filter(b => (spentByCat[b.category_id] || 0) > b.amount)
     const nearingLimit = budgets.filter(b => {
@@ -138,30 +131,53 @@ export default function DashboardPage() {
     if (budgets.length > 0 && overBudget.length === 0 && nearingLimit.length === 0) {
       insights.push({ id: 'on-track', type: 'success', title: 'All budgets on track', detail: `${budgets.length} budget${budgets.length !== 1 ? 's' : ''} within limits this month` })
     }
+  }
 
-    if (monthIncome > 0) {
-      const rate = Math.round((monthIncome - monthExpenses) / monthIncome * 100)
-      insights.push(rate >= 0
-        ? { id: 'savings', type: 'info', title: `Saving ${rate}% of your income`, detail: `${formatCurrency(savings)} saved out of ${formatCurrency(monthIncome)} earned` }
-        : { id: 'savings', type: 'warning', title: 'Spending more than you earn', detail: `${formatCurrency(Math.abs(savings))} more spent than earned this month` }
-      )
-    }
+  if (monthIncome > 0) {
+    const rate = Math.round((monthIncome - monthExpenses) / monthIncome * 100)
+    insights.push(rate >= 0
+      ? { id: 'savings', type: 'info', title: `Saving ${rate}% of your income`, detail: `${formatCurrency(savings)} saved out of ${formatCurrency(monthIncome)} earned` }
+      : { id: 'savings', type: 'warning', title: 'Spending more than you earn', detail: `${formatCurrency(Math.abs(savings))} more spent than earned this ${periodWord}` }
+    )
+  }
 
-    if (pieData.length > 0) {
-      const top = pieData[0]
-      const pct = Math.round(top.value / monthExpenses * 100)
-      insights.push({ id: 'top-cat', type: 'info', title: `${top.name} is your biggest expense`, detail: `${formatCurrency(top.value)} — ${pct}% of total spending` })
-    }
+  if (pieData.length > 0 && monthExpenses > 0) {
+    const top = pieData[0]
+    const pct = Math.round(top.value / monthExpenses * 100)
+    insights.push({ id: 'top-cat', type: 'info', title: `${top.name} is your biggest expense`, detail: `${formatCurrency(top.value)} — ${pct}% of total spending` })
+  }
 
-    const prevMonth = selectedMonth === 0 ? 11 : selectedMonth - 1
-    const prevYear = selectedMonth === 0 ? selectedYear - 1 : selectedYear
-    const prevExpenses = settled
-      .filter(t => { const d = new Date(t.date + 'T00:00:00'); return d.getMonth() === prevMonth && d.getFullYear() === prevYear && t.type === 'expense' })
-      .reduce((s, t) => s + t.amount, 0)
-    if (prevExpenses > 0 && monthExpenses > 0) {
-      const diff = monthExpenses - prevExpenses
-      const pct = Math.abs(Math.round(diff / prevExpenses * 100))
-      insights.push({ id: 'mom', type: diff > 0 ? 'warning' : 'success', title: diff > 0 ? `Spending up ${pct}% vs last month` : `Spending down ${pct}% vs last month`, detail: `${formatCurrency(monthExpenses)} this month vs ${formatCurrency(prevExpenses)} last month` })
+  if (prev.expenses > 0 && monthExpenses > 0) {
+    const diff = monthExpenses - prev.expenses
+    const pct = Math.abs(Math.round(diff / prev.expenses * 100))
+    insights.push({
+      id: 'mom',
+      type: diff > 0 ? 'warning' : 'success',
+      title: `Spending ${diff > 0 ? 'up' : 'down'} ${pct}% vs last ${periodWord}`,
+      detail: `${formatCurrency(monthExpenses)} this ${periodWord} vs ${formatCurrency(prev.expenses)} last ${periodWord}`,
+    })
+  }
+
+  // Year view has no budgets to report on, so it gets its own headline: which
+  // month cost the most.
+  if (isYear) {
+    const byMonth = Array.from({ length: 12 }, (_, i) => ({
+      month: i,
+      expenses: netTotals(settled.filter(t => {
+        const d = new Date(t.date + 'T00:00:00')
+        return d.getMonth() === i && d.getFullYear() === selectedYear
+      })).expenses,
+    })).filter(m => m.expenses > 0)
+
+    if (byMonth.length > 1) {
+      const peak = byMonth.reduce((a, b) => (b.expenses > a.expenses ? b : a))
+      const average = byMonth.reduce((s, m) => s + m.expenses, 0) / byMonth.length
+      insights.push({
+        id: 'peak-month',
+        type: 'info',
+        title: `${MONTHS[peak.month]} was your priciest month`,
+        detail: `${formatCurrency(peak.expenses)} spent — average is ${formatCurrency(average)}`,
+      })
     }
   }
 
@@ -172,7 +188,9 @@ export default function DashboardPage() {
     ...insights.filter(i => i.type === 'info'),
   ].slice(0, 4)
 
-  const recentTxns = settled.slice(0, 8)
+  // Scoped to the selected period like everything else on the page — showing
+  // globally-latest rows here made the card quietly disagree with its neighbours.
+  const recentTxns = periodTxns.slice(0, 8)
 
   if (loading) {
     return (
@@ -222,10 +240,10 @@ export default function DashboardPage() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Net Worth" value={formatCurrency(netWorth)} icon={<Wallet size={20} />} iconBg="bg-indigo-100 dark:bg-indigo-900/30" iconColor="text-indigo-600 dark:text-indigo-400" sub={`${accounts.length} account${accounts.length !== 1 ? 's' : ''}`} />
-        <StatCard label={isYear ? 'Year Income' : 'Month Income'} value={formatCurrency(monthIncome)} icon={<TrendingUp size={20} />} iconBg="bg-green-100 dark:bg-green-900/30" iconColor="text-green-600 dark:text-green-400" sub={`${periodTxns.filter(t => t.type === 'income').length} transactions`} valueColor="text-green-600" />
-        <StatCard label={isYear ? 'Year Expenses' : 'Month Expenses'} value={formatCurrency(monthExpenses)} icon={<TrendingDown size={20} />} iconBg="bg-red-100 dark:bg-red-900/30" iconColor="text-red-600 dark:text-red-400" sub={`${periodTxns.filter(t => t.type === 'expense').length} transactions`} valueColor="text-red-600" />
-        <StatCard label={isYear ? 'Year Savings' : 'Month Savings'} value={formatCurrency(savings)} icon={savings >= 0 ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />} iconBg={savings >= 0 ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-orange-100 dark:bg-orange-900/30'} iconColor={savings >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'} valueColor={savings >= 0 ? 'text-blue-600' : 'text-orange-600'} sub="Income minus expenses" />
+        <StatCard label="Net Worth" value={formatCurrency(netWorth)} icon={<Wallet size={20} />} iconBg="bg-indigo-100 dark:bg-indigo-900/30" iconColor="text-indigo-600 dark:text-indigo-400" sub={`${signed(savings)} this ${periodWord} · ${accounts.length} account${accounts.length !== 1 ? 's' : ''}`} />
+        <StatCard label={isYear ? 'Year Income' : 'Month Income'} value={formatCurrency(monthIncome)} icon={<TrendingUp size={20} />} iconBg="bg-green-100 dark:bg-green-900/30" iconColor="text-green-600 dark:text-green-400" sub={compare(prev.income)} valueColor="text-green-600" />
+        <StatCard label={isYear ? 'Year Expenses' : 'Month Expenses'} value={formatCurrency(monthExpenses)} icon={<TrendingDown size={20} />} iconBg="bg-red-100 dark:bg-red-900/30" iconColor="text-red-600 dark:text-red-400" sub={compare(prev.expenses)} valueColor="text-red-600" />
+        <StatCard label={isYear ? 'Year Savings' : 'Month Savings'} value={formatCurrency(savings)} icon={savings >= 0 ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />} iconBg={savings >= 0 ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-orange-100 dark:bg-orange-900/30'} iconColor={savings >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'} valueColor={savings >= 0 ? 'text-blue-600' : 'text-orange-600'} sub={compare(prevSavings)} />
       </div>
 
       {/* Insights */}
@@ -258,22 +276,55 @@ export default function DashboardPage() {
 
       {/* Charts row */}
       <div className="grid lg:grid-cols-2 gap-4 mb-6">
+        {/* Upcoming — the only forward-looking thing on the page. Replaced the
+            6-month bar chart, which duplicated the Reports page. */}
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">{isYear ? `Income vs Expenses — ${selectedYear}` : 'Income vs Expenses — Last 6 Months'}</h3>
-          {barData.every(d => d.income === 0 && d.expenses === 0) ? (
-            <div className="h-48 flex items-center justify-center text-slate-400 text-sm">No data yet</div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              Still to come — {isYear ? selectedYear : MONTHS[selectedMonth]}
+            </h3>
+            <Link href="/transactions" className="text-xs text-indigo-600 hover:text-indigo-500">View all</Link>
+          </div>
+
+          {upcoming.length === 0 ? (
+            <div className="h-48 flex items-center justify-center text-center text-slate-400 text-sm px-4">
+              Nothing scheduled for the rest of {isYear ? selectedYear : MONTHS[selectedMonth]}.
+            </div>
           ) : (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={barData} barSize={14}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `£${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}`} />
-                <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="income" fill="#22c55e" radius={[3, 3, 0, 0]} name="Income" />
-                <Bar dataKey="expenses" fill="#ef4444" radius={[3, 3, 0, 0]} name="Expenses" />
-              </BarChart>
-            </ResponsiveContainer>
+            <>
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-2xl font-bold text-slate-900 dark:text-white leading-none">
+                  {formatCurrency(upcomingLeaving)}
+                </span>
+                <span className="text-xs text-slate-400">leaving your accounts</span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1.5">
+                {formatCurrency(upcomingSpend)} spending
+                {upcomingTransfers > 0 && <> · {formatCurrency(upcomingTransfers)} transfers</>}
+                {upcomingIncome > 0 && <> · {formatCurrency(upcomingIncome)} due in</>}
+              </p>
+
+              {/* Tall enough for five rows before scrolling — a cap that clips
+                  mid-row reads as broken rather than scrollable. */}
+              <div className="mt-4 space-y-0.5 max-h-60 overflow-y-auto">
+                {upcoming.map(t => (
+                  <div key={t.id} className="flex items-center justify-between gap-2 py-1.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Clock size={13} className="text-amber-500 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm text-slate-900 dark:text-white truncate leading-tight">{t.description}</p>
+                        <p className="text-xs text-slate-400">{formatDate(t.date)}</p>
+                      </div>
+                    </div>
+                    <span className={`text-sm font-semibold shrink-0 ${
+                      t.type === 'income' ? 'text-green-600' : t.type === 'expense' ? 'text-red-500' : 'text-blue-500'
+                    }`}>
+                      {t.type === 'income' ? '+' : t.type === 'expense' ? '-' : ''}{formatCurrency(t.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
 
@@ -284,7 +335,7 @@ export default function DashboardPage() {
           {pieData.length === 0 ? (
             <div className="h-48 flex items-center justify-center text-slate-400 text-sm">No expense data this month</div>
           ) : (
-            <div className="flex items-center gap-4">
+            <div className="flex items-start gap-4">
               <ResponsiveContainer width={160} height={160}>
                 <PieChart>
                   <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={2} dataKey="value">
@@ -295,8 +346,10 @@ export default function DashboardPage() {
                   <Tooltip formatter={(v) => formatCurrency(Number(v))} />
                 </PieChart>
               </ResponsiveContainer>
+              {/* Every category with spend is listed — the chart draws them all,
+                  so capping the legend just hid slices with no way to identify them. */}
               <div className="flex-1 space-y-1.5 overflow-hidden">
-                {pieData.slice(0, 7).map((d, i) => (
+                {pieData.map((d, i) => (
                   <div key={i} className="flex items-center justify-between gap-2 text-xs">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
@@ -325,7 +378,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {accounts.slice(0, 5).map(account => (
+              {accounts.map(account => (
                 <div key={account.id} className="flex items-center justify-between py-2">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: account.color }}>

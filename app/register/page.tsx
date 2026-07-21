@@ -1,13 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Eye, EyeOff, AlertCircle, Check, Mail } from 'lucide-react'
 
 export default function RegisterPage() {
-  const router = useRouter()
+  // No router here: signing up doesn't navigate — it swaps this page for the
+  // "check your email" confirmation state below.
   const [form, setForm] = useState({ username: '', email: '', password: '', confirmPassword: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')

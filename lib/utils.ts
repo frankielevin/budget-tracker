@@ -33,6 +33,30 @@ export const ACCOUNT_COLORS = [
   '#06b6d4', '#0ea5e9', '#3b82f6', '#6b7280',
 ]
 
+/**
+ * Give every chart slice a colour you can tell apart.
+ *
+ * Category colours are picked freely from a fixed palette, so collisions are
+ * common — two categories both on #ef4444 render as one indistinguishable
+ * wedge. The first use of a colour keeps it; repeats are reassigned to an
+ * unused palette entry, falling back to golden-angle hue steps (which stay well
+ * separated from each other) once the palette runs out.
+ */
+export function withDistinctColors<T extends { color: string }>(items: T[]): T[] {
+  const used = new Set<string>()
+  return items.map((item, i) => {
+    if (!used.has(item.color)) {
+      used.add(item.color)
+      return item
+    }
+    const spare =
+      ACCOUNT_COLORS.find(c => !used.has(c)) ??
+      `hsl(${Math.round((i * 137.508) % 360)}, 62%, 55%)`
+    used.add(spare)
+    return { ...item, color: spare }
+  })
+}
+
 export const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
