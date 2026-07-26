@@ -44,32 +44,46 @@ interface SidebarProps {
  *
  * `large` bumps every touch target up a size for the mobile drawer, where the
  * whole point is thumb reach; the desktop rail keeps the compact sizing.
+ * `onClose`, when given, renders a close button inline in the header — kept in
+ * normal flow (not absolutely positioned) so it stays aligned with the logo.
  */
 function SidebarContent({
-  pathname, username, email, displayName, onNavigate, onLogout, large = false,
+  pathname, username, email, displayName, onNavigate, onLogout, large = false, onClose,
 }: SidebarProps & {
   pathname: string
   onNavigate: () => void
   onLogout: () => void
   large?: boolean
+  onClose?: () => void
 }) {
   const itemSize = large ? 'gap-4 px-4 py-3.5 text-base rounded-xl' : 'gap-3 px-3 py-2.5 text-sm rounded-lg'
   const iconSize = large ? 24 : 18
 
   return (
     <div className="flex flex-col h-full">
-      {/* Logo */}
+      {/* Logo (+ close button in the drawer) */}
       <div className={`border-b border-slate-800 ${large ? 'px-5 py-5' : 'px-6 py-5'}`}>
-        <div className="flex items-center gap-3">
-          <div className={`bg-indigo-600 rounded-lg flex items-center justify-center shrink-0 ${large ? 'w-9 h-9' : 'w-8 h-8'}`}>
-            <span className={`text-white font-bold leading-none ${large ? 'text-base' : 'text-sm'}`}>£</span>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`bg-indigo-600 rounded-lg flex items-center justify-center shrink-0 ${large ? 'w-9 h-9' : 'w-8 h-8'}`}>
+              <span className={`text-white font-bold leading-none ${large ? 'text-base' : 'text-sm'}`}>£</span>
+            </div>
+            <span className={`text-white font-bold truncate ${large ? 'text-lg' : 'text-base'}`}>Budget Tracker</span>
           </div>
-          <span className={`text-white font-bold ${large ? 'text-lg' : 'text-base'}`}>Budget Tracker</span>
+          {onClose && (
+            <button
+              onClick={onClose}
+              aria-label="Close menu"
+              className="shrink-0 -mr-1 p-1 text-slate-400 hover:text-white cursor-pointer"
+            >
+              <X size={24} />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Nav */}
-      <nav className={`flex-1 overflow-y-auto ${large ? 'px-3 py-4 space-y-1.5' : 'px-3 py-4 space-y-0.5'}`}>
+      <nav className={`flex-1 overflow-y-auto px-3 py-4 ${large ? 'space-y-1.5' : 'space-y-0.5'}`}>
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href
           return (
@@ -113,16 +127,34 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Lock the page behind the drawer. The scroll container is <main>, not the
-  // body, so target it directly — otherwise the background scrolls under the
-  // open menu on touch devices.
+  // Freeze the page behind the drawer. The scroll container is <main>, so lock
+  // it directly (overflow + touch-action to stop iOS touch scrolling), and lock
+  // the document as a backstop in case the scroll ever lives higher up.
   useEffect(() => {
     if (!mobileOpen) return
-    const main = document.querySelector('main')
-    if (!main) return
-    const prev = main.style.overflow
-    main.style.overflow = 'hidden'
-    return () => { main.style.overflow = prev }
+    const main = document.querySelector('main') as HTMLElement | null
+    const root = document.documentElement
+    const body = document.body
+    const saved = {
+      mainOverflowY: main?.style.overflowY ?? '',
+      mainTouch: main?.style.touchAction ?? '',
+      rootOverflow: root.style.overflow,
+      bodyOverflow: body.style.overflow,
+    }
+    if (main) {
+      main.style.overflowY = 'hidden'
+      main.style.touchAction = 'none'
+    }
+    root.style.overflow = 'hidden'
+    body.style.overflow = 'hidden'
+    return () => {
+      if (main) {
+        main.style.overflowY = saved.mainOverflowY
+        main.style.touchAction = saved.mainTouch
+      }
+      root.style.overflow = saved.rootOverflow
+      body.style.overflow = saved.bodyOverflow
+    }
   }, [mobileOpen])
 
   async function handleLogout() {
@@ -167,14 +199,7 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
         <div className="md:hidden fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/60 cursor-pointer" onClick={() => setMobileOpen(false)} />
           <div className="relative w-72 max-w-[85vw] bg-slate-900 h-full flex flex-col pt-safe pb-safe">
-            <button
-              onClick={() => setMobileOpen(false)}
-              aria-label="Close menu"
-              className="absolute top-[calc(1rem+env(safe-area-inset-top))] right-4 text-slate-400 hover:text-white cursor-pointer z-10 p-1 -m-1"
-            >
-              <X size={24} />
-            </button>
-            <SidebarContent {...contentProps} large />
+            <SidebarContent {...contentProps} large onClose={() => setMobileOpen(false)} />
           </div>
         </div>
       )}
