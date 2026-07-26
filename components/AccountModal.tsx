@@ -5,6 +5,7 @@ import { X, AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { todayStr } from '@/lib/balances'
 import { ACCOUNT_COLORS, formatCurrency } from '@/lib/utils'
+import { useScrollLock } from '@/lib/useScrollLock'
 import type { Account, AccountType } from '@/lib/types'
 
 interface Props {
@@ -35,6 +36,8 @@ export default function AccountModal({ account, onClose, onSave }: Props) {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useScrollLock()
 
   const balanceChanged = !!account && form.balance !== initialBalance
   const adjustment = balanceChanged ? (parseFloat(form.balance) || 0) - (account?.balance || 0) : 0
@@ -103,13 +106,13 @@ export default function AccountModal({ account, onClose, onSave }: Props) {
     }
   }
 
-  const inputClass = 'w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm text-slate-900 dark:text-white dark:bg-slate-700 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400'
-  const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5'
+  const inputClass = 'w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white dark:bg-slate-700 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400'
+  const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             {account ? 'Edit Account' : 'Add Account'}
           </h2>
@@ -118,7 +121,7 @@ export default function AccountModal({ account, onClose, onSave }: Props) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-3.5">
           {error && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 rounded-lg p-3 text-sm">
               <AlertCircle size={16} />

@@ -258,7 +258,13 @@ function TemplateRow({
       <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: color + '20' }}>
         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
       </div>
-      <div className="flex-1 min-w-0">
+      <div
+        className="flex-1 min-w-0 cursor-pointer"
+        role="button"
+        tabIndex={0}
+        onClick={onEdit}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEdit() } }}
+      >
         <div className="flex items-center gap-1.5">
           <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{t.description}</p>
           {upcoming > 0 && (

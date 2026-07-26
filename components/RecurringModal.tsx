@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { X, AlertCircle, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useScrollLock } from '@/lib/useScrollLock'
 import type { RecurringTransaction, Account, Category } from '@/lib/types'
 
 interface Props {
@@ -30,6 +31,8 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
   const [startYear, setStartYear] = useState(recurring?.start_year?.toString() || String(now.getFullYear()))
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useScrollLock()
 
   const isTransfer = type === 'transfer'
 
@@ -82,13 +85,13 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
     }
   }
 
-  const inputClass = 'w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm text-slate-900 dark:text-white dark:bg-slate-700 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400'
-  const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5'
+  const inputClass = 'w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white dark:bg-slate-700 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400'
+  const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800">
           <div>
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
               {recurring ? 'Edit Recurring' : 'Add Recurring'}
@@ -100,7 +103,7 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-3.5">
           {error && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 rounded-lg p-3 text-sm">
               <AlertCircle size={16} className="shrink-0" />
@@ -138,26 +141,27 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
             <input type="text" value={description} onChange={e => setDescription(e.target.value)} required autoFocus className={inputClass} placeholder={isTransfer ? 'e.g. Savings transfer, Credit card payment' : 'e.g. Netflix, Salary, Gym'} />
           </div>
 
-          <div>
-            <label className={labelClass}>Amount</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">£</span>
-              <input type="number" step="0.01" min="0.01" value={amount} onChange={e => setAmount(e.target.value)} required className={`${inputClass} pl-7`} placeholder="0.00" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelClass}>Amount</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">£</span>
+                <input type="number" step="0.01" min="0.01" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} required className={`${inputClass} pl-7`} placeholder="0.00" />
+              </div>
             </div>
-          </div>
-
-          <div>
-            <label className={labelClass}>Frequency</label>
-            <select value={frequency} onChange={e => setFrequency(e.target.value as 'monthly' | 'yearly')} className={inputClass}>
-              <option value="monthly">Monthly</option>
-              <option value="yearly">Yearly</option>
-            </select>
+            <div>
+              <label className={labelClass}>Frequency</label>
+              <select value={frequency} onChange={e => setFrequency(e.target.value as 'monthly' | 'yearly')} className={inputClass}>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
           </div>
 
           <div>
             <label className={labelClass}>Day of month (1–31)</label>
             <input type="number" min="1" max="31" value={dayOfMonth} onChange={e => setDayOfMonth(e.target.value)} required className={inputClass} />
-            <p className="text-xs text-slate-400 mt-1">Days past a month&apos;s length roll to that month&apos;s last day (e.g. 31 → 28 in February).</p>
+            <p className="text-xs text-slate-400 mt-1">Past a month&apos;s length rolls to its last day (31 → 28 in Feb).</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -207,23 +211,22 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
               <p className="text-xs text-slate-400">Both account balances will update automatically each period.</p>
             </div>
           ) : (
-            <>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelClass}>Account (optional)</label>
+                <label className={labelClass}>Account <span className="text-slate-400 font-normal">(opt.)</span></label>
                 <select value={accountId} onChange={e => setAccountId(e.target.value)} className={inputClass}>
                   <option value="">No account</option>
                   {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               </div>
-
               <div>
-                <label className={labelClass}>Category (optional)</label>
+                <label className={labelClass}>Category <span className="text-slate-400 font-normal">(opt.)</span></label>
                 <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className={inputClass}>
                   <option value="">No category</option>
                   {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-            </>
+            </div>
           )}
 
           <div className="flex gap-3 pt-2">

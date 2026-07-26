@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { X, AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { ACCOUNT_COLORS } from '@/lib/utils'
+import { useScrollLock } from '@/lib/useScrollLock'
 import type { Category, CategoryType } from '@/lib/types'
 
 interface Props {
@@ -45,6 +46,8 @@ export default function CategoryModal({ category, onClose, onSave }: Props) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  useScrollLock()
+
   function update(field: string, value: string) {
     setForm(f => ({ ...f, [field]: value }))
   }
@@ -82,13 +85,13 @@ export default function CategoryModal({ category, onClose, onSave }: Props) {
     }
   }
 
-  const inputClass = 'w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm text-slate-900 dark:text-white dark:bg-slate-700 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400'
-  const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5'
+  const inputClass = 'w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white dark:bg-slate-700 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400'
+  const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             {category ? 'Edit Category' : 'Add Category'}
           </h2>
@@ -97,7 +100,7 @@ export default function CategoryModal({ category, onClose, onSave }: Props) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-3.5">
           {error && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 rounded-lg p-3 text-sm">
               <AlertCircle size={16} />
