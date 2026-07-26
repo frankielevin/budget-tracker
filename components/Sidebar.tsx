@@ -16,7 +16,7 @@ import {
   X,
   Menu,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -41,28 +41,35 @@ interface SidebarProps {
  * this whole subtree each time — harmless while it holds no state, but it would
  * silently reset anything added later (a collapsed section, focus, a scroll
  * position).
+ *
+ * `large` bumps every touch target up a size for the mobile drawer, where the
+ * whole point is thumb reach; the desktop rail keeps the compact sizing.
  */
 function SidebarContent({
-  pathname, username, email, displayName, onNavigate, onLogout,
+  pathname, username, email, displayName, onNavigate, onLogout, large = false,
 }: SidebarProps & {
   pathname: string
   onNavigate: () => void
   onLogout: () => void
+  large?: boolean
 }) {
+  const itemSize = large ? 'gap-4 px-4 py-3.5 text-base rounded-xl' : 'gap-3 px-3 py-2.5 text-sm rounded-lg'
+  const iconSize = large ? 24 : 18
+
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="px-6 py-5 border-b border-slate-800">
+      <div className={`border-b border-slate-800 ${large ? 'px-5 py-5' : 'px-6 py-5'}`}>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shrink-0">
-            <span className="text-white text-sm font-bold leading-none">£</span>
+          <div className={`bg-indigo-600 rounded-lg flex items-center justify-center shrink-0 ${large ? 'w-9 h-9' : 'w-8 h-8'}`}>
+            <span className={`text-white font-bold leading-none ${large ? 'text-base' : 'text-sm'}`}>£</span>
           </div>
-          <span className="text-white font-bold text-base">Budget Tracker</span>
+          <span className={`text-white font-bold ${large ? 'text-lg' : 'text-base'}`}>Budget Tracker</span>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+      <nav className={`flex-1 overflow-y-auto ${large ? 'px-3 py-4 space-y-1.5' : 'px-3 py-4 space-y-0.5'}`}>
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href
           return (
@@ -70,13 +77,13 @@ function SidebarContent({
               key={href}
               href={href}
               onClick={onNavigate}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex items-center font-medium transition-colors ${itemSize} ${
                 active
                   ? 'bg-indigo-600 text-white'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
-              <Icon size={18} />
+              <Icon size={iconSize} />
               {label}
             </Link>
           )
@@ -86,14 +93,14 @@ function SidebarContent({
       {/* User */}
       <div className="px-3 py-4 border-t border-slate-800">
         <div className="px-3 py-2 mb-1">
-          <p className="text-white text-sm font-medium truncate">{displayName || username || 'User'}</p>
-          <p className="text-slate-500 text-xs truncate">{displayName ? `@${username}` : email}</p>
+          <p className={`text-white font-medium truncate ${large ? 'text-base' : 'text-sm'}`}>{displayName || username || 'User'}</p>
+          <p className={`text-slate-500 truncate ${large ? 'text-sm' : 'text-xs'}`}>{displayName ? `@${username}` : email}</p>
         </div>
         <button
           onClick={onLogout}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+          className={`flex items-center w-full font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer ${itemSize}`}
         >
-          <LogOut size={18} />
+          <LogOut size={iconSize} />
           Sign out
         </button>
       </div>
@@ -105,6 +112,18 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  // Lock the page behind the drawer. The scroll container is <main>, not the
+  // body, so target it directly — otherwise the background scrolls under the
+  // open menu on touch devices.
+  useEffect(() => {
+    if (!mobileOpen) return
+    const main = document.querySelector('main')
+    if (!main) return
+    const prev = main.style.overflow
+    main.style.overflow = 'hidden'
+    return () => { main.style.overflow = prev }
+  }, [mobileOpen])
 
   async function handleLogout() {
     const supabase = createClient()
@@ -129,16 +148,17 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
         <SidebarContent {...contentProps} />
       </aside>
 
-      {/* Mobile top bar — padded down past the status bar / notch on iOS. */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-900 border-b border-slate-800 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-indigo-600 rounded-md flex items-center justify-center">
-            <span className="text-white text-xs font-bold leading-none">£</span>
+      {/* Mobile top bar — taller for an easy menu tap, padded down past the
+          status bar / notch on iOS. */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-900 border-b border-slate-800 px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top))] flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+            <span className="text-white text-sm font-bold leading-none">£</span>
           </div>
-          <span className="text-white font-bold text-sm">Budget Tracker</span>
+          <span className="text-white font-bold text-base">Budget Tracker</span>
         </div>
-        <button onClick={() => setMobileOpen(true)} aria-label="Open menu" className="text-slate-400 hover:text-white cursor-pointer p-1 -m-1">
-          <Menu size={22} />
+        <button onClick={() => setMobileOpen(true)} aria-label="Open menu" className="text-slate-300 hover:text-white cursor-pointer p-2 -mr-2">
+          <Menu size={26} />
         </button>
       </div>
 
@@ -146,15 +166,15 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/60 cursor-pointer" onClick={() => setMobileOpen(false)} />
-          <div className="relative w-64 bg-slate-900 h-full flex flex-col pt-safe pb-safe">
+          <div className="relative w-72 max-w-[85vw] bg-slate-900 h-full flex flex-col pt-safe pb-safe">
             <button
               onClick={() => setMobileOpen(false)}
               aria-label="Close menu"
-              className="absolute top-[calc(1rem+env(safe-area-inset-top))] right-4 text-slate-400 hover:text-white cursor-pointer z-10"
+              className="absolute top-[calc(1rem+env(safe-area-inset-top))] right-4 text-slate-400 hover:text-white cursor-pointer z-10 p-1 -m-1"
             >
-              <X size={20} />
+              <X size={24} />
             </button>
-            <SidebarContent {...contentProps} />
+            <SidebarContent {...contentProps} large />
           </div>
         </div>
       )}

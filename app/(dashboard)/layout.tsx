@@ -29,7 +29,7 @@ export default async function DashboardLayout({
       <Sidebar username={username} email={user.email} displayName={profile?.full_name || null} />
       {/* On mobile, clear the fixed top bar plus the status-bar inset; add a
           bottom inset so the last row clears the home indicator. */}
-      <main className="flex-1 overflow-y-auto md:pt-0 pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)]">
+      <main className="flex-1 overflow-y-auto md:pt-0 pt-[calc(4.75rem+env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)]">
         {children}
       </main>
     </div>
