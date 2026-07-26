@@ -90,7 +90,7 @@ export default function CategoryModal({ category, onClose, onSave }: Props) {
 
   return (
     <div className="modal-overlay">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm max-h-full overflow-y-auto">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-full overflow-y-auto">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             {category ? 'Edit Category' : 'Add Category'}

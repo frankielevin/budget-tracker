@@ -158,13 +158,13 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
             </div>
           </div>
 
-          <div>
-            <label className={labelClass}>Day of month (1–31)</label>
-            <input type="number" min="1" max="31" value={dayOfMonth} onChange={e => setDayOfMonth(e.target.value)} required className={inputClass} />
-            <p className="text-xs text-slate-400 mt-1">Past a month&apos;s length rolls to its last day (31 → 28 in Feb).</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
+          {/* Day + start month/year on one row so the whole form fits a
+              screen. The rollover behaviour lives in the input's tooltip. */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className={labelClass}>Day</label>
+              <input type="number" min="1" max="31" inputMode="numeric" value={dayOfMonth} onChange={e => setDayOfMonth(e.target.value)} required title="Days past a month's length roll to its last day (e.g. 31 → 28 in Feb)" className={inputClass} />
+            </div>
             <div>
               <label className={labelClass}>Start month</label>
               <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className={inputClass}>
