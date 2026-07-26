@@ -257,10 +257,21 @@ export default function TransactionsPage() {
                     const isTransfer = t.type === 'transfer'
                     const dotColor = isTransfer ? '#3b82f6' : (cat?.color || '#6b7280')
                     const isPending = t.pending
+
+                    // One truncating meta line instead of separate spans with
+                    // dot separators — on a narrow screen those wrapped mid-date
+                    // ("25 Jul" / "2026") and clustered. Joining lets it ellipsis.
+                    const metaParts: string[] = [formatDate(t.date)]
+                    if (isTransfer && acc && toAcc) metaParts.push(`${acc.name} → ${toAcc.name}`)
+                    else {
+                      if (cat) metaParts.push(cat.name)
+                      if (acc) metaParts.push(acc.name)
+                    }
+
                     return (
                       <div
                         key={t.id}
-                        className={`flex items-center gap-4 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${i < txns.length - 1 ? 'border-b border-slate-100 dark:border-slate-700/50' : ''} ${isPending ? 'opacity-55' : ''}`}
+                        className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${i < txns.length - 1 ? 'border-b border-slate-100 dark:border-slate-700/50' : ''} ${isPending ? 'opacity-55' : ''}`}
                       >
                         <div
                           className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
@@ -270,7 +281,7 @@ export default function TransactionsPage() {
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
                             <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{t.description}</p>
                             {isPending && (
                               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded text-xs font-medium shrink-0">
@@ -285,48 +296,33 @@ export default function TransactionsPage() {
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-slate-400">{formatDate(t.date)}</span>
-                            {isTransfer && acc && toAcc && (
-                              <>
-                                <span className="text-slate-200 dark:text-slate-600">·</span>
-                                <span className="text-xs text-slate-400">{acc.name} → {toAcc.name}</span>
-                              </>
-                            )}
-                            {!isTransfer && cat && (
-                              <>
-                                <span className="text-slate-200 dark:text-slate-600">·</span>
-                                <span className="text-xs text-slate-400">{cat.name}</span>
-                              </>
-                            )}
-                            {!isTransfer && acc && (
-                              <>
-                                <span className="text-slate-200 dark:text-slate-600">·</span>
-                                <span className="text-xs text-slate-400">{acc.name}</span>
-                              </>
-                            )}
-                          </div>
+                          <p className="text-xs text-slate-400 truncate mt-0.5">{metaParts.join(' · ')}</p>
                         </div>
 
-                        <span className={`text-sm font-bold shrink-0 ${
-                          t.type === 'income' ? 'text-green-600' : t.type === 'expense' ? 'text-red-500' : 'text-blue-500'
-                        }`}>
-                          {t.type === 'income' ? '+' : t.type === 'expense' ? '-' : ''}{formatCurrency(t.amount)}
-                        </span>
-
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            onClick={() => { setEditingTx(t); setShowModal(true) }}
-                            className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <Edit size={14} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteId(t.id)}
-                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                        {/* Amount over actions in one narrow column, freeing width
+                            for the text on the left. */}
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className={`text-sm font-bold whitespace-nowrap ${
+                            t.type === 'income' ? 'text-green-600' : t.type === 'expense' ? 'text-red-500' : 'text-blue-500'
+                          }`}>
+                            {t.type === 'income' ? '+' : t.type === 'expense' ? '-' : ''}{formatCurrency(t.amount)}
+                          </span>
+                          <div className="flex items-center gap-0.5 -mr-1.5">
+                            <button
+                              onClick={() => { setEditingTx(t); setShowModal(true) }}
+                              aria-label="Edit transaction"
+                              className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <Edit size={15} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteId(t.id)}
+                              aria-label="Delete transaction"
+                              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )

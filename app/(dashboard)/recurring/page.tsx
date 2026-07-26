@@ -244,14 +244,23 @@ function TemplateRow({
     ? `Monthly on the ${t.day_of_month}${ordinal(t.day_of_month)}`
     : `Yearly in ${MONTH_NAMES[t.start_month - 1]} on the ${t.day_of_month}${ordinal(t.day_of_month)}`
 
+  // Single truncating meta line, matching the transactions list — the old
+  // separate spans wrapped and clustered on a phone.
+  const metaParts: string[] = [freqLabel]
+  if (isTransfer && acc && toAcc) metaParts.push(`${acc.name} → ${toAcc.name}`)
+  else {
+    if (cat) metaParts.push(cat.name)
+    if (acc) metaParts.push(acc.name)
+  }
+
   return (
-    <div className={`bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex items-center gap-4 ${!t.is_active ? 'opacity-60' : ''}`}>
+    <div className={`bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex items-center gap-3 ${!t.is_active ? 'opacity-60' : ''}`}>
       <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: color + '20' }}>
         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">{t.description}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{t.description}</p>
           {upcoming > 0 && (
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded text-xs font-medium shrink-0">
               <Clock size={10} />
@@ -259,31 +268,24 @@ function TemplateRow({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
-          <span>{freqLabel}</span>
-          {isTransfer && acc && toAcc ? (
-            <><span className="text-slate-200 dark:text-slate-600">·</span><span>{acc.name} → {toAcc.name}</span></>
-          ) : (
-            <>
-              {cat && <><span className="text-slate-200 dark:text-slate-600">·</span><span>{cat.name}</span></>}
-              {acc && <><span className="text-slate-200 dark:text-slate-600">·</span><span>{acc.name}</span></>}
-            </>
-          )}
-        </div>
+        <p className="text-xs text-slate-400 truncate mt-0.5">{metaParts.join(' · ')}</p>
       </div>
-      <span className={`text-sm font-bold shrink-0 ${t.type === 'income' ? 'text-green-600' : t.type === 'expense' ? 'text-red-500' : 'text-blue-500'}`}>
-        {t.type === 'income' ? '+' : t.type === 'expense' ? '-' : ''}{formatCurrency(t.amount)}
-      </span>
-      <div className="flex items-center gap-1 shrink-0">
-        <button onClick={onToggle} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors cursor-pointer" title={t.is_active ? 'Pause' : 'Resume'}>
-          {t.is_active ? <Pause size={14} /> : <Play size={14} />}
-        </button>
-        <button onClick={onEdit} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors cursor-pointer">
-          <Edit size={14} />
-        </button>
-        <button onClick={onDelete} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors cursor-pointer">
-          <Trash2 size={14} />
-        </button>
+      {/* Amount over actions in one narrow column, freeing width for the text. */}
+      <div className="flex flex-col items-end gap-1 shrink-0">
+        <span className={`text-sm font-bold whitespace-nowrap ${t.type === 'income' ? 'text-green-600' : t.type === 'expense' ? 'text-red-500' : 'text-blue-500'}`}>
+          {t.type === 'income' ? '+' : t.type === 'expense' ? '-' : ''}{formatCurrency(t.amount)}
+        </span>
+        <div className="flex items-center gap-0.5 -mr-1.5">
+          <button onClick={onToggle} aria-label={t.is_active ? 'Pause' : 'Resume'} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors cursor-pointer" title={t.is_active ? 'Pause' : 'Resume'}>
+            {t.is_active ? <Pause size={15} /> : <Play size={15} />}
+          </button>
+          <button onClick={onEdit} aria-label="Edit" className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors cursor-pointer">
+            <Edit size={15} />
+          </button>
+          <button onClick={onDelete} aria-label="Delete" className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors cursor-pointer">
+            <Trash2 size={15} />
+          </button>
+        </div>
       </div>
     </div>
   )
