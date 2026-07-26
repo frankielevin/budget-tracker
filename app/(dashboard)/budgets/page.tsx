@@ -74,14 +74,14 @@ export default function BudgetsPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Budgets</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
             {budgets.length} budget{budgets.length !== 1 ? 's' : ''} — checking progress for {MONTHS[selectedMonth]} {selectedYear}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <select value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))} className={dateSelectClass}>
             {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
           </select>
@@ -104,7 +104,7 @@ export default function BudgetsPage() {
 
       {/* Summary */}
       {budgets.length > 0 && (
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
             <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Total Budgeted</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatCurrency(totalBudgeted)}</p>

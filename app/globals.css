@@ -20,10 +20,24 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, sans-serif;
+  /* Stop the whole document rubber-banding in iOS standalone mode; inner
+     scroll containers still bounce as normal. */
+  overscroll-behavior-y: none;
+  /* Keep text sizing predictable when an iPhone is rotated. */
+  -webkit-text-size-adjust: 100%;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* Safe-area helpers for iOS standalone (notch + home indicator). No-ops in a
+   normal browser where the insets resolve to 0. */
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Custom scrollbar */

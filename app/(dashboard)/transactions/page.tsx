@@ -148,7 +148,7 @@ export default function TransactionsPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Transactions</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
@@ -161,17 +161,17 @@ export default function TransactionsPage() {
           <button
             onClick={exportCSV}
             disabled={filtered.length === 0}
-            className="flex items-center gap-2 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 dark:text-slate-200 rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
+            className="flex flex-1 sm:flex-none items-center justify-center gap-2 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 dark:text-slate-200 rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
           >
             <Download size={16} />
-            Export CSV
+            <span>Export<span className="hidden sm:inline"> CSV</span></span>
           </button>
           <button
             onClick={() => { setEditingTx(null); setShowModal(true) }}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
+            className="flex flex-1 sm:flex-none items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
           >
             <Plus size={16} />
-            Add transaction
+            <span className="whitespace-nowrap">Add<span className="hidden sm:inline"> transaction</span></span>
           </button>
         </div>
       </div>

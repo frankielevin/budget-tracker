@@ -70,7 +70,7 @@ export default function AccountsPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Net Worth</p>
           <p className={`text-xl font-bold ${netWorth >= 0 ? 'text-slate-900 dark:text-white' : 'text-red-500'}`}>

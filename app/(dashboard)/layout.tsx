@@ -23,9 +23,13 @@ export default async function DashboardLayout({
     .single()
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    // h-dvh (not h-screen): iOS standalone reports an unreliable 100vh, so the
+    // dynamic viewport unit keeps the shell from being clipped by the toolbars.
+    <div className="flex h-dvh bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <Sidebar username={username} email={user.email} displayName={profile?.full_name || null} />
-      <main className="flex-1 overflow-y-auto md:pt-0 pt-14">
+      {/* On mobile, clear the fixed top bar plus the status-bar inset; add a
+          bottom inset so the last row clears the home indicator. */}
+      <main className="flex-1 overflow-y-auto md:pt-0 pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)]">
         {children}
       </main>
     </div>

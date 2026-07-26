@@ -47,5 +47,8 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  // Skip auth-gating for static assets and PWA metadata routes. Without the
+  // manifest/apple-icon exclusions, a logged-out install request for those
+  // would be redirected to /login and the icon/manifest would fail to load.
+  matcher: ['/((?!_next/static|_next/image|manifest.webmanifest|apple-icon|icon|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)'],
 }

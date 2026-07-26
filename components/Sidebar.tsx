@@ -125,19 +125,19 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-60 bg-slate-900 border-r border-slate-800 shrink-0 h-screen sticky top-0">
+      <aside className="hidden md:flex flex-col w-60 bg-slate-900 border-r border-slate-800 shrink-0 h-dvh sticky top-0">
         <SidebarContent {...contentProps} />
       </aside>
 
-      {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+      {/* Mobile top bar — padded down past the status bar / notch on iOS. */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-900 border-b border-slate-800 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 bg-indigo-600 rounded-md flex items-center justify-center">
             <span className="text-white text-xs font-bold leading-none">£</span>
           </div>
           <span className="text-white font-bold text-sm">Budget Tracker</span>
         </div>
-        <button onClick={() => setMobileOpen(true)} className="text-slate-400 hover:text-white cursor-pointer">
+        <button onClick={() => setMobileOpen(true)} aria-label="Open menu" className="text-slate-400 hover:text-white cursor-pointer p-1 -m-1">
           <Menu size={22} />
         </button>
       </div>
@@ -146,10 +146,11 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/60 cursor-pointer" onClick={() => setMobileOpen(false)} />
-          <div className="relative w-64 bg-slate-900 h-full flex flex-col">
+          <div className="relative w-64 bg-slate-900 h-full flex flex-col pt-safe pb-safe">
             <button
               onClick={() => setMobileOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white cursor-pointer"
+              aria-label="Close menu"
+              className="absolute top-[calc(1rem+env(safe-area-inset-top))] right-4 text-slate-400 hover:text-white cursor-pointer z-10"
             >
               <X size={20} />
             </button>
