@@ -40,6 +40,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // Native-app feel: no pinch- or double-tap-zoom. (Respected in the installed
+  // standalone PWA, which is how this app is used on a phone.)
+  maximumScale: 1,
+  userScalable: false,
   // Let content extend under the notch/home indicator; pages opt back in with
   // env(safe-area-inset-*) padding where it matters.
   viewportFit: 'cover',

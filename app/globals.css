@@ -16,13 +16,20 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* No horizontal scrolling anywhere — the app only ever scrolls vertically, so
+   clip any accidental overflow and stop sideways rubber-banding. */
+html,
+body {
+  overflow-x: hidden;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, sans-serif;
-  /* Stop the whole document rubber-banding in iOS standalone mode; inner
-     scroll containers still bounce as normal. */
-  overscroll-behavior-y: none;
+  /* Native-app feel: no rubber-band overscroll in any direction (inner scroll
+     containers still scroll normally). */
+  overscroll-behavior: none;
   /* Keep text sizing predictable when an iPhone is rotated. */
   -webkit-text-size-adjust: 100%;
 }
