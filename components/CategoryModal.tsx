@@ -89,7 +89,7 @@ export default function CategoryModal({ category, onClose, onSave }: Props) {
   const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:pl-60 bg-black/60">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">

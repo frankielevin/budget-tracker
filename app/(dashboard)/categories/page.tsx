@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useScrollLock } from '@/lib/useScrollLock'
 import { Plus, Edit, Trash2, AlertTriangle } from 'lucide-react'
 import CategoryModal from '@/components/CategoryModal'
 import { formatCurrency } from '@/lib/utils'
@@ -23,6 +24,9 @@ export default function CategoriesPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+
+  // Lock the background while the delete dialog is open, matching the modals.
+  useScrollLock(!!deleteId)
 
   async function load() {
     const supabase = createClient()
@@ -203,7 +207,7 @@ export default function CategoriesPage() {
       )}
 
       {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:pl-60 bg-black/60">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 w-full max-w-sm">
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Delete category?</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm mb-3">Transactions using this category will become uncategorised.</p>

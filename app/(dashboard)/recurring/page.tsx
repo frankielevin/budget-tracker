@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useScrollLock } from '@/lib/useScrollLock'
 import { formatCurrency } from '@/lib/utils'
 import { Plus, Edit, Trash2, Repeat, Pause, Play, Clock } from 'lucide-react'
 import RecurringModal from '@/components/RecurringModal'
@@ -15,6 +16,9 @@ export default function RecurringPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<RecurringTransaction | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+
+  // Lock the background while the delete dialog is open, matching the modals.
+  useScrollLock(!!deleteId)
   const [upcomingByTemplate, setUpcomingByTemplate] = useState<Record<string, number>>({})
   const [alsoDeleteUpcoming, setAlsoDeleteUpcoming] = useState(true)
 
@@ -189,7 +193,7 @@ export default function RecurringPage() {
       )}
 
       {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:pl-60 bg-black/60">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 w-full max-w-sm">
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Delete recurring?</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">Transactions it has already generated and applied will not be affected.</p>

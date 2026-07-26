@@ -112,7 +112,7 @@ export default function TransactionModal({ transaction, accounts, categories, on
   const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:pl-60 bg-black/60">
       {/* Sized to the dynamic viewport so the whole form fits without the modal
           scrolling on a phone; overflow stays as a safety net for tiny screens. */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto">
