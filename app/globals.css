@@ -40,6 +40,29 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* Shared backdrop for every modal/dialog. Centres the panel in the *visible*
+   area: below the fixed mobile top bar and clear of the home indicator, and
+   clear of the sidebar on desktop — so dialogs read as centred on screen
+   rather than over the whole viewport. Panels use max-h-full to fit this box. */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgb(0 0 0 / 0.6);
+  padding: 1rem;
+  padding-top: calc(4.75rem + env(safe-area-inset-top));
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 768px) {
+  .modal-overlay {
+    padding: 1rem;
+    padding-left: 15rem; /* clear the w-60 desktop sidebar */
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
