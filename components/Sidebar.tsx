@@ -144,7 +144,7 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
 
       {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
+        <div className="md:hidden fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/60 cursor-pointer" onClick={() => setMobileOpen(false)} />
           <div className="relative w-64 bg-slate-900 h-full flex flex-col pt-safe pb-safe">
             <button
