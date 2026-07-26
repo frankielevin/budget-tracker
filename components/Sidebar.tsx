@@ -44,8 +44,8 @@ interface SidebarProps {
  *
  * `large` bumps every touch target up a size for the mobile drawer, where the
  * whole point is thumb reach; the desktop rail keeps the compact sizing.
- * `onClose`, when given, renders a close button inline in the header — kept in
- * normal flow (not absolutely positioned) so it stays aligned with the logo.
+ * `onClose`, when given, switches the header to a plain close control — the app
+ * title already shows in the background top bar, so repeating it is noise.
  */
 function SidebarContent({
   pathname, username, email, displayName, onNavigate, onLogout, large = false, onClose,
@@ -61,23 +61,24 @@ function SidebarContent({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Logo (+ close button in the drawer) */}
+      {/* Header: logo on the desktop rail; in the drawer just a close control. */}
       <div className={`border-b border-slate-800 ${large ? 'px-5 py-5' : 'px-6 py-5'}`}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className={`bg-indigo-600 rounded-lg flex items-center justify-center shrink-0 ${large ? 'w-9 h-9' : 'w-8 h-8'}`}>
-              <span className={`text-white font-bold leading-none ${large ? 'text-base' : 'text-sm'}`}>£</span>
-            </div>
-            <span className={`text-white font-bold truncate ${large ? 'text-lg' : 'text-base'}`}>Budget Tracker</span>
-          </div>
-          {onClose && (
+        <div className={`flex items-center gap-3 ${onClose ? 'justify-end' : ''}`}>
+          {onClose ? (
             <button
               onClick={onClose}
               aria-label="Close menu"
-              className="shrink-0 -mr-1 p-1 text-slate-400 hover:text-white cursor-pointer"
+              className="-mr-1 p-1 text-slate-400 hover:text-white cursor-pointer"
             >
               <X size={24} />
             </button>
+          ) : (
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shrink-0">
+                <span className="text-white text-sm font-bold leading-none">£</span>
+              </div>
+              <span className="text-white font-bold text-base truncate">Budget Tracker</span>
+            </div>
           )}
         </div>
       </div>
@@ -181,15 +182,15 @@ export default function Sidebar({ username, email, displayName }: SidebarProps) 
       </aside>
 
       {/* Mobile top bar — taller for an easy menu tap, padded down past the
-          status bar / notch on iOS. */}
+          status bar / notch on iOS. The title links home. */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-900 border-b border-slate-800 px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top))] flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-            <span className="text-white text-sm font-bold leading-none">£</span>
+        <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center shrink-0">
+            <span className="text-white text-base font-bold leading-none">£</span>
           </div>
-          <span className="text-white font-bold text-base">Budget Tracker</span>
-        </div>
-        <button onClick={() => setMobileOpen(true)} aria-label="Open menu" className="text-slate-300 hover:text-white cursor-pointer p-2 -mr-2">
+          <span className="text-white font-bold text-lg truncate">Budget Tracker</span>
+        </Link>
+        <button onClick={() => setMobileOpen(true)} aria-label="Open menu" className="text-slate-300 hover:text-white cursor-pointer p-2 -mr-2 shrink-0">
           <Menu size={26} />
         </button>
       </div>
