@@ -104,7 +104,7 @@ export default function BudgetModal({ budget, categories, takenCategoryIds, onCl
             <label className={labelClass}>Monthly limit</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">£</span>
-              <input type="number" step="0.01" min="0.01" value={amount} onChange={e => setAmount(e.target.value)} required autoFocus className={`${inputClass} pl-7`} placeholder="0.00" />
+              <input type="number" step="0.01" min="0.01" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} required className={`${inputClass} pl-7`} placeholder="0.00" />
             </div>
           </div>
 

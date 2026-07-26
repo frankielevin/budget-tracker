@@ -138,7 +138,7 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
 
           <div>
             <label className={labelClass}>Description</label>
-            <input type="text" value={description} onChange={e => setDescription(e.target.value)} required autoFocus className={inputClass} placeholder={isTransfer ? 'e.g. Savings transfer, Credit card payment' : 'e.g. Netflix, Salary, Gym'} />
+            <input type="text" value={description} onChange={e => setDescription(e.target.value)} required className={inputClass} placeholder={isTransfer ? 'e.g. Savings transfer, Credit card payment' : 'e.g. Netflix, Salary, Gym'} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
