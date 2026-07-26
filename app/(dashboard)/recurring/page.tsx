@@ -104,10 +104,10 @@ export default function RecurringPage() {
         </div>
         <button
           onClick={() => { setEditingTemplate(null); setShowModal(true) }}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap"
         >
           <Plus size={16} />
-          Add recurring
+          Add<span className="hidden sm:inline"> recurring</span>
         </button>
       </div>
 

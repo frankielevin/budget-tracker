@@ -280,7 +280,13 @@ export default function TransactionsPage() {
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dotColor }} />
                         </div>
 
-                        <div className="flex-1 min-w-0">
+                        <div
+                          className="flex-1 min-w-0 cursor-pointer"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => { setEditingTx(t); setShowModal(true) }}
+                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingTx(t); setShowModal(true) } }}
+                        >
                           <div className="flex items-center gap-1.5">
                             <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{t.description}</p>
                             {isPending && (

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { X, AlertCircle, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { transactionDeltas, mergeDeltas, negateDeltas, applyBalanceDeltas, isPendingDate } from '@/lib/balances'
+import { useScrollLock } from '@/lib/useScrollLock'
 import type { Transaction, Account, Category, TransactionType } from '@/lib/types'
 
 interface Props {
@@ -27,6 +28,9 @@ export default function TransactionModal({ transaction, accounts, categories, on
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Freeze the page behind the modal — only the modal itself can move.
+  useScrollLock()
 
   function update(field: string, value: string) {
     setForm(f => ({ ...f, [field]: value }))
@@ -104,22 +108,24 @@ export default function TransactionModal({ transaction, accounts, categories, on
     }
   }
 
-  const inputClass = 'w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm text-slate-900 dark:text-white dark:bg-slate-700 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400'
-  const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5'
+  const inputClass = 'w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white dark:bg-slate-700 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400'
+  const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+      {/* Sized to the dynamic viewport so the whole form fits without the modal
+          scrolling on a phone; overflow stays as a safety net for tiny screens. */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             {transaction ? 'Edit Transaction' : 'Add Transaction'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-1 -mr-1">
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-3.5">
           {error && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 rounded-lg p-3 text-sm">
               <AlertCircle size={16} className="shrink-0" />
@@ -152,12 +158,18 @@ export default function TransactionModal({ transaction, accounts, categories, on
             </div>
           </div>
 
-          {/* Amount */}
-          <div>
-            <label className={labelClass}>Amount</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">£</span>
-              <input type="number" step="0.01" min="0.01" value={form.amount} onChange={e => update('amount', e.target.value)} required className={`${inputClass} pl-7`} placeholder="0.00" />
+          {/* Amount + Date share a row to keep the form to one screen. */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelClass}>Amount</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">£</span>
+                <input type="number" step="0.01" min="0.01" inputMode="decimal" value={form.amount} onChange={e => update('amount', e.target.value)} required className={`${inputClass} pl-7`} placeholder="0.00" />
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Date</label>
+              <input type="date" value={form.date} onChange={e => update('date', e.target.value)} required className={inputClass} />
             </div>
           </div>
 
@@ -165,12 +177,6 @@ export default function TransactionModal({ transaction, accounts, categories, on
           <div>
             <label className={labelClass}>Description</label>
             <input type="text" value={form.description} onChange={e => update('description', e.target.value)} required className={inputClass} placeholder={isTransfer ? 'e.g. Credit card payment' : 'e.g. Grocery shopping'} />
-          </div>
-
-          {/* Date */}
-          <div>
-            <label className={labelClass}>Date</label>
-            <input type="date" value={form.date} onChange={e => update('date', e.target.value)} required className={inputClass} />
           </div>
 
           {/* Transfer: From + To accounts */}
@@ -204,7 +210,7 @@ export default function TransactionModal({ transaction, accounts, categories, on
               <p className="text-xs text-slate-400">Both account balances will update automatically.</p>
             </div>
           ) : (
-            <>
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelClass}>Account</label>
                 <select value={form.account_id} onChange={e => update('account_id', e.target.value)} className={inputClass}>
@@ -219,7 +225,7 @@ export default function TransactionModal({ transaction, accounts, categories, on
                   {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-            </>
+            </div>
           )}
 
           {/* Notes */}
@@ -229,12 +235,12 @@ export default function TransactionModal({ transaction, accounts, categories, on
               value={form.notes}
               onChange={e => update('notes', e.target.value)}
               rows={2}
-              className={`${inputClass} resize-y`}
+              className={`${inputClass} resize-none`}
               placeholder="Anything worth remembering about this one"
             />
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer">
               Cancel
             </button>
