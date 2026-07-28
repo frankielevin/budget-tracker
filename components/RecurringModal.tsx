@@ -181,34 +181,28 @@ export default function RecurringModal({ recurring, accounts, categories, onClos
             </div>
           </div>
 
+          {/* From → To on one row — see TransactionModal for why. */}
           {isTransfer ? (
-            <div className="space-y-3">
-              <div>
-                <label className={labelClass}>From account</label>
+            <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-end">
+              <div className="min-w-0">
+                <label className={labelClass}>From</label>
                 <select value={accountId} onChange={e => setAccountId(e.target.value)} required className={inputClass}>
                   <option value="">Select account</option>
-                  {accounts.filter(a => a.id !== toAccountId).map(a => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
+                  {accounts.map(a => (
+                    <option key={a.id} value={a.id} disabled={a.id === toAccountId}>{a.name}</option>
                   ))}
                 </select>
               </div>
-              <div className="flex items-center justify-center">
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <div className="h-px w-12 bg-slate-200 dark:bg-slate-600" />
-                  <ArrowRight size={14} className="text-slate-400" />
-                  <div className="h-px w-12 bg-slate-200 dark:bg-slate-600" />
-                </div>
-              </div>
-              <div>
-                <label className={labelClass}>To account</label>
+              <ArrowRight size={16} aria-hidden className="text-slate-400 shrink-0 mb-2.5" />
+              <div className="min-w-0">
+                <label className={labelClass}>To</label>
                 <select value={toAccountId} onChange={e => setToAccountId(e.target.value)} required className={inputClass}>
                   <option value="">Select account</option>
-                  {accounts.filter(a => a.id !== accountId).map(a => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
+                  {accounts.map(a => (
+                    <option key={a.id} value={a.id} disabled={a.id === accountId}>{a.name}</option>
                   ))}
                 </select>
               </div>
-              <p className="text-xs text-slate-400">Both account balances will update automatically each period.</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">

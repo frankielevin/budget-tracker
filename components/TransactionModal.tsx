@@ -179,35 +179,32 @@ export default function TransactionModal({ transaction, accounts, categories, on
             <input type="text" value={form.description} onChange={e => update('description', e.target.value)} required className={inputClass} placeholder={isTransfer ? 'e.g. Credit card payment' : 'e.g. Grocery shopping'} />
           </div>
 
-          {/* Transfer: From + To accounts */}
+          {/* Transfer: From → To on a single row, mirroring the Account/Category
+              row below, so switching type doesn't resize the dialog under the
+              cursor or push the buttons out of view. The account already picked
+              on the other side stays listed but disabled — options disappearing
+              mid-edit makes swapping the two ends impossible. */}
           {isTransfer ? (
-            <div className="space-y-3">
-              <div>
-                <label className={labelClass}>From account</label>
+            <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-end">
+              <div className="min-w-0">
+                <label className={labelClass}>From</label>
                 <select value={form.account_id} onChange={e => update('account_id', e.target.value)} required className={inputClass}>
                   <option value="">Select account</option>
-                  {accounts.filter(a => a.id !== form.to_account_id).map(a => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
+                  {accounts.map(a => (
+                    <option key={a.id} value={a.id} disabled={a.id === form.to_account_id}>{a.name}</option>
                   ))}
                 </select>
               </div>
-              <div className="flex items-center justify-center">
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <div className="h-px w-12 bg-slate-200 dark:bg-slate-600" />
-                  <ArrowRight size={14} className="text-slate-400" />
-                  <div className="h-px w-12 bg-slate-200 dark:bg-slate-600" />
-                </div>
-              </div>
-              <div>
-                <label className={labelClass}>To account</label>
+              <ArrowRight size={16} aria-hidden className="text-slate-400 shrink-0 mb-2.5" />
+              <div className="min-w-0">
+                <label className={labelClass}>To</label>
                 <select value={form.to_account_id} onChange={e => update('to_account_id', e.target.value)} required className={inputClass}>
                   <option value="">Select account</option>
-                  {accounts.filter(a => a.id !== form.account_id).map(a => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
+                  {accounts.map(a => (
+                    <option key={a.id} value={a.id} disabled={a.id === form.account_id}>{a.name}</option>
                   ))}
                 </select>
               </div>
-              <p className="text-xs text-slate-400">Both account balances will update automatically.</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
