@@ -47,10 +47,11 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Shared backdrop for every modal/dialog. Centres the panel in the *visible*
-   area: below the fixed mobile top bar and clear of the home indicator, and
-   clear of the sidebar on desktop — so dialogs read as centred on screen
-   rather than over the whole viewport. Panels use max-h-full to fit this box. */
+/* Shared backdrop for every modal/dialog. On mobile the panel is centred in the
+   *visible* area: below the fixed top bar and clear of the home indicator. On
+   desktop it is centred on the viewport (the sidebar sits underneath the
+   backdrop) so dialogs read as centred on screen. Panels use max-h-full to fit
+   this box. */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -65,8 +66,9 @@ body {
 }
 @media (min-width: 768px) {
   .modal-overlay {
+    /* No top-bar/safe-area offsets on desktop, and symmetric padding so the
+       panel lands dead centre of the viewport rather than the content column. */
     padding: 1rem;
-    padding-left: 15rem; /* clear the w-60 desktop sidebar */
   }
 }
 
