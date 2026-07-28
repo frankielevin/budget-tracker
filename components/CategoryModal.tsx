@@ -13,27 +13,24 @@ interface Props {
   onSave: () => void
 }
 
-const CATEGORY_TYPES: { value: CategoryType; label: string; hint: string; accent: string; dot: string }[] = [
+const CATEGORY_TYPES: { value: CategoryType; label: string; hint: string; accent: string }[] = [
   {
     value: 'expense',
     label: 'Money out',
     hint: 'Spending. Anything paid back to you reduces what this category cost.',
-    accent: 'bg-red-50 dark:bg-red-900/20 border-red-400',
-    dot: 'bg-red-500 border-red-500',
+    accent: 'bg-red-100 text-red-700 border-red-400',
   },
   {
     value: 'income',
     label: 'Money in',
     hint: 'Earnings — salary, dividends, revenue. Never cancelled against spending.',
-    accent: 'bg-green-50 dark:bg-green-900/20 border-green-400',
-    dot: 'bg-green-500 border-green-500',
+    accent: 'bg-green-100 text-green-700 border-green-400',
   },
   {
     value: 'both',
     label: 'Both',
     hint: 'Earns and costs, like a side project. The two sides stay separate.',
-    accent: 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-400',
-    dot: 'bg-indigo-500 border-indigo-500',
+    accent: 'bg-indigo-100 text-indigo-700 border-indigo-400',
   },
 ]
 
@@ -95,7 +92,7 @@ export default function CategoryModal({ category, onClose, onSave }: Props) {
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             {category ? 'Edit Category' : 'Add Category'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
             <X size={20} />
           </button>
         </div>
@@ -113,36 +110,36 @@ export default function CategoryModal({ category, onClose, onSave }: Props) {
             <input type="text" value={form.name} onChange={e => update('name', e.target.value)} required className={inputClass} placeholder="e.g. Groceries" />
           </div>
 
-          {/* All three explained at once — the choice changes how totals are
-              calculated, so it shouldn't be something you can skip past. */}
+          {/* The choice changes how totals are calculated, so it stays an
+              explicit three-way choice with the reasoning attached — but as a
+              segmented control (matching the transaction modal) rather than
+              three stacked cards, which made the dialog taller than the screen
+              and pushed the buttons out of reach. Only the selected option's
+              hint shows; the worked example below covers all three. */}
           <div>
             <label className={labelClass}>What is this category for?</label>
-            <div className="space-y-2">
-              {CATEGORY_TYPES.map(t => {
-                const selected = form.type === t.value
-                return (
-                  <button
-                    key={t.value}
-                    type="button"
-                    onClick={() => update('type', t.value)}
-                    className={`w-full text-left rounded-lg border-2 px-3 py-2.5 transition-colors cursor-pointer ${
-                      selected
-                        ? t.accent
-                        : 'border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 ${selected ? t.dot : 'border-slate-300 dark:border-slate-500'}`} />
-                      <span className="text-sm font-medium text-slate-900 dark:text-white">{t.label}</span>
-                    </span>
-                    <span className="block text-xs text-slate-500 dark:text-slate-400 mt-1 pl-[22px] leading-snug">
-                      {t.hint}
-                    </span>
-                  </button>
-                )
-              })}
+            <div className="grid grid-cols-3 gap-2">
+              {CATEGORY_TYPES.map(t => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => update('type', t.value)}
+                  className={`py-2 rounded-lg border-2 text-sm font-medium transition-colors cursor-pointer ${
+                    form.type === t.value
+                      ? t.accent
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-transparent hover:bg-slate-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
-            <p className="text-xs text-slate-400 mt-2 leading-snug">
+            {/* Fixed height: the hints differ in length, and a reflow here would
+                shift everything below it as you compare the options. */}
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-snug min-h-[2rem]">
+              {CATEGORY_TYPES.find(t => t.value === form.type)?.hint}
+            </p>
+            <p className="text-xs text-slate-400 leading-snug">
               Example: a £100 shop with £40 paid back shows as £60 spent under <strong>Money out</strong>.
               Under <strong>Money in</strong> or <strong>Both</strong> it would show £100 spent and £40 earned.
             </p>
@@ -150,14 +147,17 @@ export default function CategoryModal({ category, onClose, onSave }: Props) {
 
           <div>
             <label className={labelClass}>Colour</label>
-            <div className="flex flex-wrap gap-2">
+            {/* A grid, not flex-wrap: twelve swatches wrapped to eleven plus a
+                lone orphan on the second row. */}
+            <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5 justify-items-center">
               {ACCOUNT_COLORS.map(color => (
                 <button
                   key={color}
                   type="button"
+                  aria-label={`Colour ${color}`}
                   onClick={() => update('color', color)}
                   style={{ backgroundColor: color }}
-                  className={`w-7 h-7 rounded-full transition-transform hover:scale-110 cursor-pointer ${
+                  className={`w-7 h-7 sm:w-6 sm:h-6 rounded-full transition-transform hover:scale-110 cursor-pointer ${
                     form.color === color ? 'ring-2 ring-offset-2 ring-slate-400 dark:ring-offset-slate-800 scale-110' : ''
                   }`}
                 />
